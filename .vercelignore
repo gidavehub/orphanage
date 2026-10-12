@@ -1,0 +1,11 @@
+# Never upload local secrets, practice data or generated scratch with a CLI deploy.
+.env*
+!.env.example
+.data
+.claude
+.vercel
+.next
+node_modules
+media-src
+coverage
+*.tsbuildinfo

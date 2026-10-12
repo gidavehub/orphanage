@@ -1,6 +1,6 @@
 [
   {
-    "origin": ["https://haven.org.gm", "https://*.vercel.app"],
+    "origin": ["https://haven.org.gm", "https://orphanage-delta.vercel.app"],
     "method": ["PUT"],
     "responseHeader": ["Content-Type", "x-goog-content-length-range"],
     "maxAgeSeconds": 3600

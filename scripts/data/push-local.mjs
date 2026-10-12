@@ -116,7 +116,8 @@ const subs = plan.filter((x) => x.path.includes("/"));
 if (subs.length) console.log(`  + ${subs.reduce((n, c) => n + c.docs.length, 0)} documents in ${subs.length} subcollections (events, notes, versions)`);
 
 // The data key must match, or sealed fields can't be read in production.
-const localKey = await readFile(path.join(DATA, "keys", "data.key")).catch(() => null);
+// The file holds the key base64-encoded, as lib/server/security/seal.ts reads it: compare the bytes.
+const localKey = await readFile(path.join(DATA, "keys", "data.key"), "utf8").then((s) => Buffer.from(s.trim(), "base64")).catch(() => null);
 const fp = (b) => createHash("sha256").update(b).digest("hex").slice(0, 12);
 if (localKey) {
   const prodKey = env.HAVEN_DATA_KEY ? Buffer.from(env.HAVEN_DATA_KEY, "base64") : null;

@@ -133,4 +133,5 @@ It creates the sign-in user and the staff record, and prints a one-time link to 
 - **"Data storage isn't connected"** on Connections: `FIREBASE_SERVICE_ACCOUNT_JSON` is missing or not on one line.
 - **"Data key missing"**: set `HAVEN_DATA_KEY`.
 - **Sealed fields show "can't be opened"**: the production `HAVEN_DATA_KEY` differs from the key the records were sealed with.
-- **Uploads fail with a CORS error**: `storage.cors.json` doesn't list the site's domain; edit it and run the `gsutil cors set` command again.
+- **Uploads fail with a CORS error**: `storage.cors.json` doesn't list the site's domain. Edit it (Cloud Storage takes exact origins, no `*.` wildcards) and apply it again: `gcloud storage buckets update gs://orphanage-project-511119.firebasestorage.app --cors-file=storage.cors.json --project orphanage-project-511119`.
+- **`ERR_REQUIRE_ESM` from `jwks-rsa` in the Vercel logs** (sign-in fails): Vercel's runtime can't `require()` the ESM-only `jose` 6. `package.json` `overrides` pins `jose` 5.10.0 (CommonJS build, same API) under `jwks-rsa`. Keep that override when upgrading `firebase-admin`, and check with `node --no-experimental-require-module -e "require('firebase-admin/auth')"`.

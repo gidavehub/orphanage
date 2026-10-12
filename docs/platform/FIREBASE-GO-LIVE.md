@@ -12,12 +12,22 @@ node scripts/qa/firebase-preflight.mjs
 
 It reports which settings are missing (names only, never values), checks the rules, indexes and CORS files, and lists the console steps below.
 
-## Status (11 October 2026)
+## Status (12 October 2026)
 
-- The Firestore `(default)` database already exists in **`nam5`** (United States), Native mode.
-- The deny-all **rules** and all **78 composite indexes** are deployed.
-- **Billing is off** on the project. Firestore **TTL** policies and the Cloud Storage default bucket need the **Blaze** (pay-as-you-go) plan. Once the owner turns billing on, run `firebase deploy --only firestore:indexes,storage --project orphanage-project-511119` to add the TTL policies and the storage rules. Haven's usage is small, but set a budget alert in Google Cloud Billing.
-- Still to do by a person: steps 3–8 below.
+Done:
+
+- **Billing** is on (Blaze). Set a budget alert in Google Cloud Billing.
+- **Firestore** `(default)` database in **`nam5`** (United States), Native mode. The deny-all rules, all 78 composite indexes and the 7 **TTL** policies are deployed.
+- **Storage:** the default bucket `orphanage-project-511119.firebasestorage.app` is in **`us-central1`**, which keeps Firebase's no-cost storage allowance. Its settings: uniform access, public access prevention enforced, 30-day soft delete, `quarantine/` cleared after a day. The storage rules are deployed. CORS lists the live site's address.
+- **Sign-in:** upgraded to Identity Platform. Email/Password and TOTP sign-in codes are on, self sign-up is off, passwords need 12+ characters, and the Vercel address is an authorised domain.
+- **Vercel** project `orphanage` (connected to GitHub `gidavehub/orphanage`; every push to `main` deploys production). Its Production variables are set: the Firebase service account and web config, `HAVEN_DATA_KEY` (the practice key, so the copied content opens) with `HAVEN_DATA_KEY_ID=local`, and the HMAC, lookup and cron secrets.
+- The website content was copied with `push-local.mjs --content-only`.
+
+Still to do by a person:
+
+- Keep **two offline copies** of the data key. It is `.data/keys/data.key` on the build computer and `HAVEN_DATA_KEY` in Vercel.
+- When the domain is ready, add it in Vercel and set `NEXT_PUBLIC_SITE_URL`. Then add it to the authorised domains (step 4) and to `storage.cors.json` (step 3).
+- Create the first super admin (step 7) if it isn't done yet.
 
 ## 1. Decide the location (permanent)
 
@@ -70,7 +80,7 @@ Firestore and Storage locations **cannot be changed later**. Recommended: `eur3`
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | Project settings → Service accounts → Generate new private key. Paste the whole file **on one line**. |
 | `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Project settings → Your apps → Web app config. Public by design. |
 | `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | The bucket name from step 3. |
-| `HAVEN_DATA_KEY`, `HAVEN_DATA_KEY_ID` | The key that seals case narratives. **Losing it destroys sealed records for ever.** Keep an offline copy. To keep practice records, use the same key as practice mode (base64 of `.data/keys/data.key`). |
+| `HAVEN_DATA_KEY`, `HAVEN_DATA_KEY_ID` | The key that seals case narratives. **Losing it destroys sealed records for ever.** Keep an offline copy. To keep practice records, use the same key as practice mode (the contents of `.data/keys/data.key`) with `HAVEN_DATA_KEY_ID=local`, the id practice mode seals with. |
 | `HAVEN_HMAC_SECRET`, `HAVEN_LOOKUP_SECRET` | Signing and lookup secrets. `HAVEN_LOOKUP_SECRET` must **never** change once donors exist. |
 | `CRON_SECRET` | For the scheduled jobs. |
 

@@ -9,6 +9,7 @@ import { Field } from "@/components/ui/form/Field";
 import { Input } from "@/components/ui/form/Input";
 import { COPY } from "@/lib/admin/copy";
 import { exchangeForSession, signInWithPassword } from "@/lib/client/firebase";
+import { CodeSetup } from "./CodeSetup";
 import { FormAlert } from "./FormAlert";
 import { PasswordInput } from "./PasswordInput";
 
@@ -16,13 +17,15 @@ import { PasswordInput } from "./PasswordInput";
  * Firebase-mode sign-in (data-model §9.1; PLAN D86, D88): firebase/auth checks the password in the
  * browser, the ID token is exchanged for Haven's session cookie at POST /api/auth/session, then the
  * page reloads into the admin. Accounts with a sign-in code continue at /admin/login/code; the
- * pending sign-in is held in memory only (lib/client/firebase.ts), so a reload starts again.
+ * pending sign-in is held in memory only (lib/client/firebase.ts), so a reload starts again. A role
+ * that needs a code but has none yet sets it up here first (CodeSetup).
  */
 export function FirebaseSignInForm({ next }: { next: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
+  const [setup, setSetup] = useState<{ email: string; password: string; remember: boolean } | null>(null);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -52,12 +55,15 @@ export function FirebaseSignInForm({ next }: { next: string }) {
     const session = await exchangeForSession(result.idToken, { remember, next });
     if (!session.ok) {
       setBusy(false);
-      setError(session.message);
+      if (session.enrolMfa) setSetup({ email, password, remember });
+      else setError(session.message);
       return;
     }
     // A full load: the admin starts fresh with the new session.
     window.location.assign(session.next);
   }
+
+  if (setup) return <CodeSetup {...setup} next={next} onCancel={() => setSetup(null)} />;
 
   return (
     <form onSubmit={onSubmit} noValidate className="grid grid-cols-1 gap-5">

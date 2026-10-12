@@ -20,6 +20,7 @@ async function CodePanel({ searchParams }: { searchParams: SearchParams }) {
   const sp = await searchParams;
   const next = safeNextPath(Array.isArray(sp.next) ? sp.next[0] : sp.next);
   const remember = (Array.isArray(sp.remember) ? sp.remember[0] : sp.remember) === "1";
+  const justSetUp = (Array.isArray(sp.setup) ? sp.setup[0] : sp.setup) === "1";
   if (resolveBackend() !== "firestore") {
     return (
       <div className="grid gap-5">
@@ -30,7 +31,7 @@ async function CodePanel({ searchParams }: { searchParams: SearchParams }) {
       </div>
     );
   }
-  return <CodeForm next={next} remember={remember} />;
+  return <CodeForm next={next} remember={remember} justSetUp={justSetUp} />;
 }
 
 export default function LoginCodePage({ searchParams }: { searchParams: SearchParams }) {

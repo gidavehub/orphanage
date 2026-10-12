@@ -10,12 +10,14 @@ import {
   getMultiFactorResolver,
   inMemoryPersistence,
   initializeAuth,
+  multiFactor,
   signInWithEmailAndPassword,
   signOut,
   TotpMultiFactorGenerator,
   type Auth,
   type MultiFactorError,
   type MultiFactorResolver,
+  type TotpSecret,
   type User,
 } from "firebase/auth";
 import { safeNextPath } from "@/lib/model/session";
@@ -147,6 +149,61 @@ export async function reauthenticate(email: string, password: string): Promise<F
   return signInWithPassword(email, password);
 }
 
+/* ── First sign-in code (TOTP enrolment) ─────────────────────────────── */
+
+// Roles that need a code (D88) set one up at their first sign-in: the server has just checked the
+// password and the staff record (POST /api/auth/session answered "enrol_mfa"), so the person signs
+// in again here, gets a new authenticator secret, and confirms one code to save it on the account.
+// The signed-in user and the secret live in memory only, for this page.
+
+let setupUser: User | null = null;
+let setupSecret: TotpSecret | null = null;
+
+export type CodeSetupStart = { kind: "ok"; secretKey: string; uri: string } | { kind: "error"; message: string };
+
+/** Starts setting up a sign-in code: a fresh password sign-in, then a new authenticator secret. */
+export async function startCodeSetup(email: string, password: string): Promise<CodeSetupStart> {
+  const auth = getFirebaseAuth();
+  if (!auth) return { kind: "error", message: "Sign-in isn't set up here yet." };
+  await cancelCodeSetup();
+  try {
+    const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
+    const secret = await TotpMultiFactorGenerator.generateSecret(await multiFactor(cred.user).getSession());
+    setupUser = cred.user;
+    setupSecret = secret;
+    return { kind: "ok", secretKey: secret.secretKey, uri: secret.generateQrCodeUrl(cred.user.email ?? email.trim(), "Haven") };
+  } catch (err) {
+    const code = errorCode(err);
+    await signOut(auth).catch(() => {});
+    if (code === "auth/multi-factor-auth-required") return { kind: "error", message: "This account already has a sign-in code. Please sign in again and enter it." };
+    if (code === "auth/unverified-email") return { kind: "error", message: "This account's email isn't confirmed yet. Please ask a super admin to send you a new invitation." };
+    return { kind: "error", message: messageFor(code) };
+  }
+}
+
+/** Confirms the first code from the authenticator app and saves the code on the account. */
+export async function finishCodeSetup(code: string): Promise<{ kind: "ok" } | { kind: "error"; message: string }> {
+  const auth = getFirebaseAuth();
+  const user = setupUser;
+  const secret = setupSecret;
+  if (!auth || !user || !secret) return { kind: "error", message: "Please sign in again to set up your code." };
+  try {
+    await multiFactor(user).enroll(TotpMultiFactorGenerator.assertionForEnrollment(secret, code.replace(/\D/g, "")), "Authenticator app");
+    await cancelCodeSetup();
+    return { kind: "ok" };
+  } catch (err) {
+    return { kind: "error", message: messageFor(errorCode(err)) };
+  }
+}
+
+/** Forgets a code set-up in progress and signs out locally. */
+export async function cancelCodeSetup(): Promise<void> {
+  setupUser = null;
+  setupSecret = null;
+  const auth = getFirebaseAuth();
+  if (auth?.currentUser) await signOut(auth).catch(() => {});
+}
+
 /* ── Session exchange ─────────────────────────────────────────────────── */
 
 export type SessionExchangeResult = { ok: true; next: string } | { ok: false; enrolMfa?: true; message: string };
@@ -163,7 +220,7 @@ export async function exchangeForSession(idToken: string, opts: { remember: bool
     const body = (await res.json().catch(() => ({}))) as { ok?: boolean; next?: string; message?: string };
     if (res.ok && body.ok) return { ok: true, next: safeNextPath(body.next) };
     if (body.next === "enrol_mfa") {
-      return { ok: false, enrolMfa: true, message: "Your role needs a sign-in code. Please set one up from your invitation, or ask a super admin to help." };
+      return { ok: false, enrolMfa: true, message: "Your role needs a sign-in code. Let's set one up now." };
     }
     return { ok: false, message: body.message ?? "That sign-in didn't work. Please try again." };
   } catch {

@@ -44,7 +44,8 @@ try {
   user = await auth.getUserByEmail(EMAIL);
   console.log("Using the existing Firebase user for that address.");
 } catch {
-  user = await auth.createUser({ email: EMAIL, displayName: NAME, emailVerified: false, disabled: false });
+  // Verified: the password link goes to this address, and sign-in codes (TOTP) need a verified email.
+  user = await auth.createUser({ email: EMAIL, displayName: NAME, emailVerified: true, disabled: false });
   console.log("Created the Firebase user.");
 }
 

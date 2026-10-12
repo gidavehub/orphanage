@@ -9,6 +9,8 @@ on:
   workflow_dispatch: {}
 jobs:
   tick:
+    # Stays idle (no failed runs, no emails) until SITE_URL is set in the repository's variables.
+    if: ${{ vars.SITE_URL != '' }}
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:

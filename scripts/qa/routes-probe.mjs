@@ -72,7 +72,8 @@ await probe("export as viewer", "/admin/export/donations?contact=1", { headers: 
 await probe("unknown export", "/admin/export/safeguardingConcerns", { headers: { cookie: viewer } });
 const superAdmin = await signIn("super_admin");
 await probe("concerns are not exportable", "/admin/export/safeguardingConcerns", { headers: { cookie: superAdmin } });
-await probe("search from another site", "/api/admin/search?q=a", { headers: { cookie: viewer, Origin: "https://evil.example", "Sec-Fetch-Site": "cross-site" }, expect: [200, 403] });
+// On a live site there is no practice sign-in, so the "Viewer" is signed out and 401 is right.
+await probe("search from another site", "/api/admin/search?q=a", { headers: { cookie: viewer, Origin: "https://evil.example", "Sec-Fetch-Site": "cross-site" }, expect: viewer ? [200, 403] : [401, 403] });
 
 // Scheduled jobs.
 for (const job of ["tick", "retention", "editorial"]) {

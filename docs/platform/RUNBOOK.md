@@ -57,6 +57,8 @@ Deploy. The server log's first lines show `data=firestore` and list any producti
 
 ## 4. Email (Resend)
 
+Status (12 October 2026): live with the stand-in domain `swipe.gm`. The variables are `RESEND_API_KEY`, `EMAIL_FROM=Haven <haven@swipe.gm>` and `EMAIL_REPLY_TO=haven@swipe.gm`. The delivery webhook goes to `/api/email/webhook`, with its secret in `RESEND_WEBHOOK_SECRET`. When Haven's domain is ready, repeat steps 1–2 with it and update the two addresses.
+
 1. Create the Resend account and add the sending domain (for example `mail.<domain>`). Add Resend's DKIM and SPF records, and DMARC `v=DMARC1; p=none; rua=mailto:dmarc@<domain>` (tighten to `quarantine` after 30 days).
 2. In Vercel: `RESEND_API_KEY`, `EMAIL_FROM` (`Haven <hello@mail.<domain>>`), `EMAIL_REPLY_TO`. Leave `EMAIL_REDIRECT_TO` unset in Production.
 3. Optional delivery events: a Resend webhook to `https://<domain>/api/email/webhook` (delivered, delayed, bounced, complained); its secret goes in `RESEND_WEBHOOK_SECRET`.

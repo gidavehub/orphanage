@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# local practice-mode data (database, files, keys, mailbox): never commit
+/.data/
 
 # vercel
 .vercel
@@ -39,3 +43,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# generated media sources (raw model output)
+/media-src/raw/
+/media-src/qa/
+
+# personal Claude Code settings
+/.claude/settings.local.json

@@ -1,0 +1,12 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Deny-all (data-model §7.2). Public files are streamed by app/m/[...path] (public/ prefix only);
+    // private files are streamed by audited admin routes or reached through 60-second signed URLs.
+    // Bucket settings: uniform bucket-level access on, public access prevention enforced, soft delete
+    // 30 days, lifecycle rule deleting quarantine/ objects older than 1 day.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

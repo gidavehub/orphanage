@@ -1,26 +1,767 @@
 @import "tailwindcss";
+@import "lenis/dist/lenis.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Tailwind scans the whole repo for class names. Design docs and generated media sources quote
+   class strings as examples (e.g. bg-[url(...)]), which would compile into broken CSS. */
+@source not "../docs";
+@source not "../media-src";
+@source not "../.data";
+
+/* ------------------------------------------------------------------ */
+/*  Haven design tokens — sampled from the Donat + Voices United refs  */
+/* ------------------------------------------------------------------ */
+/* `static`: every token is always emitted as a CSS variable, because components build some
+   token names at runtime (status tints, kind tints, brush colours: `var(--color-${tone})`),
+   which Tailwind's scanner cannot see. Emitting unused variables changes no pixels. */
+@theme static {
+  --color-forest: #1f715a;
+  --color-forest-700: #1a5f4c;
+  --color-deep: #14332b;
+  --color-night: #061512;
+  --color-night-2: #0c211c;
+  --color-marigold: #f5af08;
+  --color-marigold-600: #e09f00;
+  --color-marigold-line: #ebdaa3;
+  --color-flame: #f0462c;
+  --color-coral: #f25e44;
+  --color-coral-700: #e14f36;
+  --color-paper: #f4f1ec;
+  --color-cream: #fcf9ea;
+  --color-cream-2: #fffcf3;
+  --color-card: #f9f6ed;
+  --color-mint: #dfebe7;
+  /* Warmed from #f1f2ec so the VU chapters sit on an earthier sand. */
+  --color-vu-cream: #f5efe4;
+  /* Earth accents (client brief: "orange, brown, yellow… earth tones"). */
+  --color-clay: #b8572a;
+  --color-clay-700: #9a4620;
+  --color-cocoa: #7b4a2b;
+  --color-umber: #4a2c1a;
+  --color-sand: #f3e7d3;
+  --color-ink: #1d1d1b;
+  --color-body: #5c5b58;
+  --color-line: #e7e3da;
+  --color-track: #f9dfdc;
+
+  /* ── design-system §1.8 additions (PLAN D116). No existing value above changes. ── */
+  /* Accessible "ink" variants: text and icons on light surfaces; small white text on warm fills. */
+  --color-marigold-ink: #946200; /* as text: white 5.24, paper 4.65, vu-cream 4.58, cream-2 5.11 */
+  --color-coral-800: #c03a24; /* white text on it 5.42; as text on white 5.42, vu-cream 4.74 */
+  /* Tints (status pills, notices, selected states). */
+  --color-marigold-100: #fcebc0; /* the icon halo; umber text on it 10.7 */
+  --color-coral-100: #fdebe6; /* coral-800 text on it 4.70 (admin "urgent-soft") */
+  --color-clay-100: #f8e1d3; /* clay-700 text on it 5.11 */
+  --color-pebble: #efede8; /* closed/archived; body text on it 5.80 */
+  --color-restricted-soft: #e7eeeb; /* restricted safeguarding canvas (D116) */
+  /* Controls. */
+  --color-field: #f1f1ef; /* filled input (vu skin), Segmented track */
+  --color-mist: #ececea; /* chip borders, decorative greys */
+  --color-edge: #8f897e; /* control borders that must hit 3:1: white 3.47, paper 3.08, field 3.07 */
+
+  /* Elevation (→ shadow-* utilities). */
+  --shadow-thumb: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-chip: 0 8px 20px -16px rgba(74, 44, 26, 0.6);
+  --shadow-soft: 0 12px 40px -18px rgba(20, 51, 43, 0.22);
+  --shadow-card: 0 18px 40px -28px rgba(20, 51, 43, 0.35);
+  --shadow-card-hover: 0 30px 60px -30px rgba(20, 51, 43, 0.45);
+  --shadow-float: 0 24px 60px -20px rgba(6, 21, 18, 0.35);
+  --shadow-modal: 0 40px 80px -40px rgba(6, 21, 18, 0.55);
+  --shadow-bar: 0 10px 30px -18px rgba(6, 21, 18, 0.35);
+  --shadow-earth: 0 30px 60px -35px rgba(46, 26, 14, 0.55);
+  --shadow-dock: 0 -12px 40px -24px rgba(6, 21, 18, 0.35); /* admin phone dock (D116) */
+
+  /* Radii (→ rounded-* utilities). */
+  --radius-tile: 18px;
+  --radius-control: 22px; /* textarea, file drop, admin cards */
+  --radius-card: 26px;
+  --radius-card-lg: 30px;
+  --radius-panel: 40px;
+
+  /* Measures (→ max-w-* utilities). */
+  --container-reading: 45rem; /* 720px: prose, policies, articles */
+  --container-form: 47.5rem; /* 760px: single-column forms */
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
+
+  --animate-levitate: levitate 6s ease-in-out infinite;
+  --animate-levitate-slow: levitate 8s ease-in-out infinite;
+  --animate-pulse-ring: pulse-ring 2.4s cubic-bezier(0.2, 0.6, 0.35, 1) infinite;
+  --animate-heartbeat: heartbeat 1.6s ease-in-out infinite;
+  --animate-wobble: wobble 5s ease-in-out infinite;
+  --animate-twinkle: twinkle 3.2s ease-in-out infinite;
+  --animate-marquee: marquee 38s linear infinite;
+  --animate-spin-slow: spin 18s linear infinite;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-nunito), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-anton), "Arial Narrow", Impact, sans-serif;
+  --font-script: var(--font-caveat), "Comic Sans MS", cursive;
+  --font-grotesk: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@keyframes levitate {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(0, -18px, 0) rotate(-1.5deg); }
+}
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 0.55; }
+  100% { transform: scale(1.75); opacity: 0; }
+}
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  15% { transform: scale(1.18); }
+  30% { transform: scale(0.96); }
+  45% { transform: scale(1.1); }
+  60% { transform: scale(1); }
+}
+@keyframes wobble {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-6deg); }
+  75% { transform: rotate(5deg); }
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.7); }
+}
+@keyframes marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+@keyframes kenburns {
+  from { transform: scale(1); }
+  to { transform: scale(1.12); }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Layout utilities                                                   */
+/* ------------------------------------------------------------------ */
+@utility wrap {
+  width: 100%;
+  max-width: 1330px;
+  margin-inline: auto;
+  padding-inline: 16px;
+  @media (width >= 48rem) {
+    padding-inline: 24px;
+  }
+}
+@utility wrap-wide {
+  width: 100%;
+  max-width: 1790px;
+  margin-inline: auto;
+  padding-inline: 16px;
+  @media (width >= 48rem) {
+    padding-inline: 32px;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* Fibrous handmade-paper texture used behind Donat-style sections. */
+@utility paper {
+  background-color: var(--color-paper);
+  background-image: url("/textures/paper-v5.svg");
+  background-size: 600px 600px;
+}
+
+/* Outline display text for the Voices United pinned list. */
+@utility text-outline {
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 1.5px currentColor;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: #fff;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    overflow-x: clip;
+  }
+  ::selection {
+    background: var(--color-marigold);
+    color: var(--color-night);
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-marigold);
+    outline-offset: 3px;
+    /* Contextual focus colour (design-system §1.8): unset = today's marigold, so the landing page is
+       unchanged. Light surfaces (Section, AdminShell, forms) set --focus: var(--color-forest). */
+    outline-color: var(--focus, var(--color-marigold));
+  }
+  img,
+  video {
+    max-width: 100%;
+  }
+  /* The team space: a grid with no column template gets one column that may shrink (grid-cols-1),
+     so a long no-wrap line truncates instead of widening the page on a phone. Any grid-cols utility
+     still wins (utilities sit in a later layer). */
+  :where([data-desk]) :where(.grid:not([class^="grid-cols-"], [class*=" grid-cols-"])) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Anchor jumps (TOC, error summary, AnchorLink) clear the sticky bars: the 68px mobile bar and
+     the 88px pill from xl (PLAN D124). AnchorLink uses the same offsets for Lenis. */
+  html {
+    scroll-padding-top: 84px;
+    @media (width >= 80rem) {
+      scroll-padding-top: 104px;
+    }
+  }
+
+  /* Staff "large text" preference (admin-ux §10.1, D91). */
+  [data-text="lg"] {
+    font-size: 112.5%;
+  }
+
+  /* Native dialogs (Modal, Sheet): no UA border/padding; the panel styles itself. */
+  dialog {
+    color: inherit;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Haven mark entrance + hover                                        */
+/* ------------------------------------------------------------------ */
+.haven-mark__roof,
+.haven-mark__stem,
+.haven-mark__heart {
+  transform-box: fill-box;
+}
+.haven-mark__roof { transform-origin: 50% 100%; }
+.haven-mark__stem { transform-origin: 50% 100%; }
+.haven-mark__heart { transform-origin: 50% 60%; }
+
+.haven-mark--animated .haven-mark__roof { animation: haven-roof 0.9s var(--ease-out-back) both 0.35s; }
+.haven-mark--animated .haven-mark__stem { animation: haven-stem 0.7s var(--ease-out-expo) both; }
+.haven-mark--animated .haven-mark__stem + .haven-mark__stem { animation-delay: 0.12s; }
+.haven-mark--animated .haven-mark__heart { animation: haven-heart 0.8s var(--ease-out-back) both 0.6s; }
+
+a:hover .haven-mark__heart,
+.group:hover .haven-mark__heart {
+  animation: heartbeat 1.4s ease-in-out infinite;
+}
+
+@keyframes haven-roof {
+  from { transform: translateY(-40%) scale(0.6); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes haven-stem {
+  from { transform: scaleY(0); }
+  to { transform: none; }
+}
+@keyframes haven-heart {
+  from { transform: scale(0); }
+  to { transform: none; }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Programme icon hover animations (card has class `group`)           */
+/* ------------------------------------------------------------------ */
+.programme-icon .pi-part { transform-box: fill-box; transform-origin: 50% 50%; }
+.programme-icon .pi-swing,
+.programme-icon .pi-balance,
+.programme-icon .pi-counter-l,
+.programme-icon .pi-counter-r,
+.programme-icon .pi-roll { transform-box: view-box; }
+
+.group:hover .pi-pulse { animation: pi-pulse 0.9s var(--ease-out-back); }
+.group:hover .pi-beat { animation: heartbeat 1.2s ease-in-out infinite; }
+.group:hover .pi-tilt { animation: pi-tilt 0.9s var(--ease-out-back); }
+.group:hover .pi-swing { animation: pi-swing 1.4s ease-in-out infinite; }
+.group:hover .pi-shake { animation: pi-shake 0.7s ease-in-out; }
+.group:hover .pi-roll { animation: pi-roll 1s var(--ease-out-back); }
+.group:hover .pi-bob { animation: pi-bob 1.6s ease-in-out infinite; }
+.group:hover .pi-bob-slow { animation: pi-bob 2s ease-in-out infinite reverse; }
+.group:hover .pi-pop { animation: pi-pop 0.8s var(--ease-out-back); }
+.group:hover .pi-balance { animation: pi-balance 2.2s ease-in-out infinite; }
+.group:hover .pi-counter-l,
+.group:hover .pi-counter-r { animation: pi-counter 2.2s ease-in-out infinite; }
+.group:hover .pi-lift { animation: pi-lift 0.9s var(--ease-out-back); }
+
+@keyframes pi-pulse { 0% { transform: scale(1); } 40% { transform: scale(1.12); } 100% { transform: scale(1); } }
+@keyframes pi-tilt { 0% { transform: rotate(0); } 35% { transform: rotate(-12deg) translateY(-3px); } 100% { transform: rotate(0); } }
+@keyframes pi-swing { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(10deg); } 75% { transform: rotate(-7deg); } }
+@keyframes pi-shake { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-9deg); } 40% { transform: rotate(8deg); } 60% { transform: rotate(-5deg); } 80% { transform: rotate(3deg); } }
+@keyframes pi-roll { 0% { transform: translateX(0) rotate(0); } 50% { transform: translateX(-6px) rotate(-120deg); } 100% { transform: translateX(0) rotate(0); } }
+@keyframes pi-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes pi-pop { 0% { transform: scale(1); } 45% { transform: scale(1.35); } 100% { transform: scale(1); } }
+@keyframes pi-balance { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(-9deg); } 70% { transform: rotate(7deg); } }
+@keyframes pi-counter { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(9deg); } 70% { transform: rotate(-7deg); } }
+@keyframes pi-lift { 0% { transform: translateY(0); } 40% { transform: translateY(-5px); } 100% { transform: translateY(0); } }
+
+@keyframes nav-drop {
+  from { transform: translateY(-110%); }
+  to { transform: translateY(0); }
+}
+@keyframes hero-rise {
+  from { transform: translateY(110%) rotate(3deg); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes progress {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Scroll reveal (components/ui/Reveal.tsx) — IntersectionObserver +  */
+/*  CSS transitions; attributes are removed once the reveal finishes.  */
+/* ------------------------------------------------------------------ */
+@property --wipe {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 120%;
+}
+/* BrushReveal `immediate` (above the fold): the wipe runs from the first paint, no script needed. */
+@keyframes brush-wipe {
+  from { --wipe: -20%; }
+  to { --wipe: 120%; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .brush-wipe-in {
+    animation: brush-wipe var(--wipe-dur, 1.4s) cubic-bezier(0.65, 0, 0.35, 1) var(--wipe-delay, 0s) both;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal]:not([data-shown]),
+  [data-reveal-stagger]:not([data-shown]) > * {
+    opacity: 0;
+    translate: var(--rx, 0) var(--ry, 40px);
+    scale: var(--rs, 1);
+  }
+  [data-reveal][data-shown],
+  [data-reveal-stagger][data-shown] > * {
+    transition:
+      opacity var(--rdur, 1s) var(--ease-out-expo),
+      translate var(--rdur, 1s) var(--ease-out-expo),
+      scale var(--rdur, 1s) var(--ease-out-expo);
+    transition-delay: calc(var(--rdel, 0s) + var(--i, 0) * var(--rstag, 0s));
+  }
+}
+
+/* Self-drawing line art: paths carry pathLength="1"; the svg gets [data-drawn] in view. */
+.draw-path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset var(--draw-dur, 2.2s) cubic-bezier(0.65, 0, 0.35, 1) var(--draw-delay, 0s);
+}
+[data-drawn] .draw-path {
+  stroke-dashoffset: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .draw-path { stroke-dashoffset: 0; transition: none; }
+}
+
+/* Footer statement words rise when the footer arrives. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-rise]:not([data-shown]) span > span { translate: 0 100%; }
+  [data-rise] span > span {
+    transition: translate 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+    transition-delay: calc(var(--i, 0) * 60ms);
+  }
+}
+
+/* Manifesto knockout words rise into place (paths inside the SVG mask). */
+@media (prefers-reduced-motion: no-preference) {
+  .manifesto-line {
+    transform-box: fill-box;
+    transition: translate 1.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 1.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .manifesto-plate:not([data-shown]) .manifesto-line {
+    translate: 0 60%;
+    opacity: 0;
+  }
+}
+
+/* World presence map (components/sections/WorldFlags.tsx): markers grow on hover,
+   the head-office marker breathes. */
+.world-marker__dot {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.3s var(--ease-out-back);
+}
+.world-marker:hover .world-marker__dot {
+  transform: scale(1.6);
+}
+.world-marker__pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pulse-ring 2.4s cubic-bezier(0.2, 0.6, 0.35, 1) infinite;
+}
+
+/* Below-the-fold sections skip layout/paint until near the viewport (big first-render
+   win on phones). `auto` remembers real sizes once rendered; SmoothScroll re-measures
+   ScrollTrigger (the Focus pin) whenever one of these sections starts rendering. */
+@utility cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
+}
+
+/* ------------------------------------------------------------------ */
+/*  UI kit (components/ui/**) — design-system §3                       */
+/* ------------------------------------------------------------------ */
+
+/* Light surfaces use a forest focus ring (5.89 on white, 5.22 on paper); dark ones keep marigold. */
+@utility focus-forest {
+  --focus: var(--color-forest);
+}
+@utility focus-marigold {
+  --focus: var(--color-marigold);
+}
+
+/* Native select chevron (the Donate card's data-URI, moved into CSS). */
+@utility select-chevron {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%231d1d1b' stroke-width='1.6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: 12px;
+  background-position: right 1.25rem center;
+}
+@utility select-chevron-light {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23ffffff' stroke-width='1.6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: 12px;
+  background-position: right 1.25rem center;
+}
+
+/* Horizontal scrollers (chips, tabs): hidden scrollbar plus a visible edge fade (admin-ux §13). */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+@utility scroll-fade-x {
+  mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 24px), transparent);
+}
+
+/* Duo "charcoal" overlay and the Team portrait ground, kept as utilities so cards carry no raw hex. */
+@utility bg-charcoal-veil {
+  background-color: rgb(43 43 42 / 0.88);
+}
+@utility bg-portrait {
+  background-color: rgb(233 236 234);
+}
+
+/* Skeleton (design-system §3.4): warm stone with a cream sweep; static under reduced motion. */
+@keyframes skeleton-sweep {
+  from { background-position: 150% 0; }
+  to { background-position: -50% 0; }
+}
+@utility skeleton {
+  background-color: var(--color-line);
+  background-image: linear-gradient(100deg, transparent 30%, color-mix(in srgb, var(--color-cream-2) 85%, transparent) 50%, transparent 70%);
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: skeleton-sweep 1.6s linear infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+    background-image: none;
+  }
+}
+
+/* Overlays: Modal, Sheet and Toast entrances (exits are instant or a short fade). */
+@keyframes modal-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes sheet-in-right {
+  from { transform: translateX(100%); }
+  to { transform: none; }
+}
+@keyframes sheet-in-up {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes toast-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes drain {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+dialog[data-haven-dialog]::backdrop {
+  background: rgb(6 21 18 / 0.6);
+  backdrop-filter: blur(4px);
+  animation: backdrop-in 0.3s var(--ease-out-expo);
+}
+/* An open Modal or Sheet locks the page behind it. Lenis ignores events inside the dialog
+   (data-lenis-prevent), so the kit never needs the Lenis instance (and never pulls GSAP into the admin). */
+html:has(dialog[data-haven-dialog][open]) {
+  overflow: hidden;
+}
+
+/* QuickExit (D95) pins a bar to the bottom on phones: keep page content, ScrollTop and toasts clear. */
+@media (width < 48rem) {
+  body[data-quick-exit] {
+    padding-bottom: calc(48px + env(safe-area-inset-bottom));
+  }
+  body[data-quick-exit] [data-scroll-top] {
+    bottom: calc(48px + env(safe-area-inset-bottom) + 1rem);
+  }
+}
+body[data-quick-exit] [data-toast-region] {
+  bottom: calc(48px + env(safe-area-inset-bottom) + 1rem);
+  @media (width >= 48rem) {
+    bottom: 5.5rem;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Long-form typography: <Prose> and the admin editor surface         */
+/*  (design-system §3.2). :where() keeps specificity at zero so        */
+/*  utilities on child elements still win.                             */
+/* ------------------------------------------------------------------ */
+@utility prose-haven {
+  font-family: var(--font-sans);
+  font-size: var(--prose-size, 17px);
+  line-height: 1.8;
+  color: var(--color-body);
+  overflow-wrap: break-word;
+
+  & :where(p, ul, ol, blockquote, table, figure, pre) {
+    margin-block: 0 1.1em;
+  }
+  & > :where(:first-child) {
+    margin-top: 0;
+  }
+  & > :where(:last-child) {
+    margin-bottom: 0;
+  }
+  & :where(h2) {
+    margin-top: 3.5rem;
+    margin-bottom: 1.25rem;
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    color: var(--color-ink);
+    text-wrap: balance;
+  }
+  & :where(h2)::after {
+    content: "";
+    display: block;
+    width: 48px;
+    height: 2px;
+    margin-top: 0.6rem;
+    background: var(--color-marigold);
+  }
+  & :where(h3) {
+    margin-top: 2.25rem;
+    margin-bottom: 0.75rem;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.35;
+    color: var(--color-forest);
+  }
+  & :where(h4) {
+    margin-top: 1.75rem;
+    margin-bottom: 0.5rem;
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--color-ink);
+  }
+  & :where(h2, h3, h4) {
+    scroll-margin-top: 84px;
+    @media (width >= 80rem) {
+      scroll-margin-top: 104px;
+    }
+  }
+  & :where(a) {
+    color: var(--color-forest);
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: var(--color-marigold);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+    transition: color 0.3s;
+  }
+  & :where(a:hover) {
+    color: var(--color-ink);
+  }
+  & :where(strong, b) {
+    color: var(--color-ink);
+    font-weight: 700;
+  }
+  & :where(ul) {
+    list-style: none;
+    padding-left: 1.6em;
+  }
+  & :where(ul > li) {
+    position: relative;
+  }
+  & :where(ul > li)::before {
+    content: "";
+    position: absolute;
+    left: -1.35em;
+    top: 0.62em;
+    width: 10px;
+    height: 9px;
+    background: var(--color-marigold);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-15 -15 30 27'%3E%3Cpath d='M0 12C-8 6-15 0-15-7C-15-12-11-15-7-15C-4-15-1-13 0-10C1-13 4-15 7-15C11-15 15-12 15-7C15 0 8 6 0 12Z'/%3E%3C/svg%3E") center / contain no-repeat;
+  }
+  & :where(ol) {
+    list-style: none;
+    padding-left: 2.4em;
+    counter-reset: prose-ol;
+  }
+  & :where(ol > li) {
+    position: relative;
+    counter-increment: prose-ol;
+  }
+  & :where(ol > li)::before {
+    content: counter(prose-ol, decimal-leading-zero);
+    position: absolute;
+    left: -2.4em;
+    top: 0.05em;
+    font-family: var(--font-display);
+    font-size: 1.05em;
+    line-height: 1.7;
+    color: var(--color-forest);
+  }
+  & :where(li + li) {
+    margin-top: 0.45em;
+  }
+  & :where(li > ul, li > ol) {
+    margin-top: 0.45em;
+    margin-bottom: 0;
+  }
+  & :where(blockquote) {
+    border-left: 4px solid var(--color-marigold);
+    border-radius: 1rem;
+    background: var(--color-cream);
+    padding: 1rem 1.25rem;
+    color: var(--color-ink);
+  }
+  & :where(blockquote > :last-child) {
+    margin-bottom: 0;
+  }
+  & :where(table) {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-grotesk);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  & :where(thead th) {
+    background: var(--color-sand);
+    color: var(--color-ink);
+    font-weight: 600;
+    text-align: left;
+  }
+  & :where(th, td) {
+    border-bottom: 1px solid var(--color-line);
+    padding: 0.6rem 0.75rem;
+    vertical-align: top;
+  }
+  & :where(hr) {
+    border: 0;
+    height: 28px;
+    margin-block: 2.5rem;
+    background: var(--color-mist);
+    mask: url("/brush/strokes.svg") center / 84px 84px no-repeat;
+  }
+  & :where(figure) {
+    margin-inline: 0;
+  }
+  & :where(img) {
+    border-radius: var(--radius-card);
+  }
+  & :where(figcaption) {
+    margin-top: 0.6rem;
+    font-family: var(--font-grotesk);
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--color-body);
+  }
+  & :where(code) {
+    font-size: 0.9em;
+    background: var(--color-pebble);
+    border-radius: 6px;
+    padding: 0.1em 0.35em;
+    color: var(--color-ink);
+  }
+}
+@utility prose-lg {
+  --prose-size: 18px;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Route view transitions (design-system §4.6, public-pages §2.7).   */
+/*  P8 wraps the site's children in                                    */
+/*  <ViewTransition enter="page-in" exit="page-out" default="none">.   */
+/* ------------------------------------------------------------------ */
+@keyframes vt-fade-out {
+  to { opacity: 0; }
+}
+@keyframes vt-rise-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+::view-transition {
+  pointer-events: none;
+}
+::view-transition-old(.page-out) {
+  animation: 150ms ease-out both vt-fade-out;
+}
+::view-transition-new(.page-in) {
+  animation: 300ms var(--ease-out-expo) 100ms both vt-rise-in;
+}
+::view-transition-group(.morph) {
+  animation-duration: 400ms;
+  animation-timing-function: var(--ease-out-expo);
+}
+
+/* Reduced motion: route transitions swap instantly (the global rule above covers the kit's CSS). */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}
+
+/* Studio preview (A7): scroll reveals never hide content inside the editing iframe. */
+[data-studio] [data-reveal],
+[data-studio] [data-reveal-stagger] > * {
+  opacity: 1 !important;
+  translate: none !important;
+  scale: none !important;
+}
+
+/* First-day tour (admin-ux §6.18): the step's control wears a pulsing marigold ring. */
+.tour-ring {
+  position: relative;
+  z-index: 45;
+  border-radius: 9999px;
+  box-shadow: 0 0 0 3px var(--color-marigold), 0 0 0 8px color-mix(in srgb, var(--color-marigold) 35%, transparent);
+  animation: tour-ring 1.8s ease-in-out infinite;
+}
+@keyframes tour-ring {
+  50% { box-shadow: 0 0 0 3px var(--color-marigold), 0 0 0 14px color-mix(in srgb, var(--color-marigold) 0%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-ring { animation: none; }
 }

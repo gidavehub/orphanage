@@ -1,0 +1,15 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Haven: browsers never read or write Firestore. Every access goes through the Next.js server,
+    // which uses the Admin SDK (rules do not apply to it) and enforces roles in lib/server/dal.
+    // Keep this deny-all (data-model §7.1). If a realtime feature is ever added, open ONE narrow
+    // path, for example:
+    //   match /notifications/{id} {
+    //     allow read: if request.auth != null && resource.data.recipientUid == request.auth.uid;
+    //   }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

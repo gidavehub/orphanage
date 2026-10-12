@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600">
+  <filter id="relief" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.036 0.011" numOctaves="5" seed="21" stitchTiles="stitch" result="bump"/>
+    <feDiffuseLighting in="bump" lighting-color="#ffffff" surfaceScale="3.6" diffuseConstant="1" result="lit">
+      <feDistantLight azimuth="245" elevation="52"/>
+    </feDiffuseLighting>
+    <feColorMatrix in="lit" type="matrix" result="shade"
+      values="0 0 0 0 0.36
+              0 0 0 0 0.33
+              0 0 0 0 0.29
+              -0.46 0 0 0 0.43"/>
+    <feColorMatrix in="lit" type="matrix" result="shine"
+      values="0 0 0 0 1
+              0 0 0 0 1
+              0 0 0 0 1
+              1.1 0 0 0 -0.9"/>
+    <feMerge><feMergeNode in="shade"/><feMergeNode in="shine"/></feMerge>
+  </filter>
+  <rect width="600" height="600" filter="url(#relief)"/>
+</svg>

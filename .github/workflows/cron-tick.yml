@@ -1,0 +1,15 @@
+# The Hobby-plan pinger (integrations §7.3; PLAN D110). Vercel Hobby runs crons at most daily, so this
+# calls the tick every 15 minutes. On a Pro plan, change the tick schedule in vercel.json to
+# "*/15 * * * *" and delete this workflow. Needs the repository secret CRON_SECRET and the variable
+# SITE_URL (for example https://haven.org). GitHub may delay runs by a few minutes; nothing
+# safety-critical depends on it (re-alerts are scheduled with the email provider).
+name: cron-tick
+on:
+  schedule: [{ cron: "*/15 * * * *" }]
+  workflow_dispatch: {}
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - run: curl -fsS -m 90 -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ vars.SITE_URL }}/api/cron/tick" > /dev/null

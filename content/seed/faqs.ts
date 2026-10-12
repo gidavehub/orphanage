@@ -1,0 +1,191 @@
+// FAQs (content-model §3.5, PLAN D49). The eight landing questions verbatim from content/people.ts →
+// faq, in today's order, all placed on the home page plus the public groups they belong to
+// (public-pages §3.20: support, safeguarding, donations = "donate", involved, about).
+// The emergency and "no guarantee" answers are safety-critical: `locked`, so only the safeguarding
+// officer and super admin can change them.
+// P5 adds the /faq groups' own questions after the landing eight (never placed on "home", so the
+// landing FAQ is unchanged). CLIENT: these answers are [draft] and need Haven's approval (ToR §18).
+
+import "server-only";
+
+import type { ItemSeed } from "@/lib/content/types";
+
+export const faqSeeds: ItemSeed<"faqs">[] = [
+  {
+    id: "faq-emergency",
+    order: 1,
+    q: "Is Haven an emergency-response service?",
+    a: "No. If a child is in immediate danger, contact the appropriate emergency, law-enforcement or child-protection authority immediately. Do not wait for a response from this website.",
+    placements: ["home", "support", "safeguarding", "programme"],
+    locked: true,
+  },
+  {
+    id: "faq-guarantee",
+    order: 2,
+    q: "Does submitting a request guarantee support?",
+    a: "Every request is reviewed according to our policies, available resources and safeguarding procedures. Submitting a request does not automatically guarantee financial or programme support.",
+    placements: ["home", "support", "programme"],
+    locked: true,
+  },
+  {
+    id: "faq-privacy",
+    order: 3,
+    q: "How is my personal information protected?",
+    a: "Sensitive records are restricted by role, the platform is encrypted with HTTPS, and we only collect the information we need. You can ask us to correct or delete your information.",
+    placements: ["home", "support", "safeguarding", "programme"],
+    locked: false,
+  },
+  {
+    id: "faq-in-kind",
+    order: 4,
+    q: "Can I donate items instead of money?",
+    a: "Yes. We welcome school materials, clothing, food, medical supplies, learning devices, furniture and professional services. Tell us what you would like to give and we will follow up.",
+    placements: ["home", "donate", "programme"],
+    locked: false,
+  },
+  {
+    id: "faq-choose",
+    order: 5,
+    q: "How do you choose which orphanages and families to support?",
+    a: "We go out into communities ourselves and visit orphanages in person, meeting their directors, ustaz and teachers. Where we cannot travel yet, we contact the organisation, build a relationship and confirm it is authentic before any support is given, then identify the needs together and follow up.",
+    placements: ["home", "about", "support"],
+    locked: false,
+  },
+  {
+    id: "faq-abroad",
+    order: 6,
+    q: "Can I give from outside The Gambia?",
+    a: "Yes. Haven welcomes supporters from every country. You can choose to give in dalasi, US dollars, pounds or euros, and our team will confirm the approved payment method for your location.",
+    placements: ["home", "donate"],
+    locked: false,
+  },
+  {
+    id: "faq-seasonal",
+    order: 7,
+    q: "Do you run appeals for Ramadan, Eid, Christmas and Thanksgiving?",
+    a: "Yes. Alongside year-round programmes, we run seasonal appeals such as Ramadan food packs and Zakat al-Fitr, Eid clothes and gifts, Christmas gift boxes and Thanksgiving family meals, each with its own transparent target.",
+    placements: ["home", "donate"],
+    locked: false,
+  },
+  {
+    id: "faq-involved",
+    order: 8,
+    q: "How can I volunteer or partner with Haven?",
+    a: "Express your interest in outreach, education, counselling, medical, legal, fundraising, communications, research, administration or technology support, and our team will be in touch.",
+    placements: ["home", "involved"],
+    locked: false,
+  },
+  // ── /faq groups (P5). CLIENT [draft] ──────────────────────────────────────────────────────────
+  {
+    id: "faq-who-can-ask",
+    order: 20,
+    q: "Who can ask Haven for support?",
+    a: "Children and young people, parents, caregivers, teachers, community members and professionals can all ask on behalf of a child or family facing hardship. Verified partner organisations can refer families to us too.",
+    placements: ["support", "about", "programme"],
+    locked: false,
+  },
+  {
+    id: "faq-after-request",
+    order: 21,
+    q: "What happens after I send a request?",
+    a: "We confirm that we've received it in the way you prefer, then review it against our policies, resources and safeguarding procedures. We may ask for more information or documents before deciding, and we always tell you the outcome.",
+    placements: ["support", "programme"],
+    locked: false,
+  },
+  {
+    id: "faq-anonymous",
+    order: 22,
+    q: "Can I report a concern about a child anonymously?",
+    a: "Yes. You can report a concern without giving your name. If you do share contact details, only authorised safeguarding staff can see them, and they use them only to follow up on the concern.",
+    placements: ["safeguarding", "programme"],
+    locked: true,
+  },
+  {
+    id: "faq-after-concern",
+    order: 23,
+    q: "What happens after I report a concern?",
+    a: "Authorised safeguarding staff review every report, give it a risk level and escalate anything urgent straight away. Where needed we refer the concern to protection services or the authorities, and every action is recorded.",
+    placements: ["safeguarding", "programme"],
+    locked: true,
+  },
+  {
+    id: "faq-my-information",
+    order: 24,
+    q: "How do I see, correct or delete my information?",
+    a: "Send us a [privacy request](/privacy/request). We first confirm that the request came from you, then reply within 30 days. Some records, such as gift receipts, must be kept for a time by law, and we will explain if so.",
+    placements: ["safeguarding", "support"],
+    locked: false,
+  },
+  {
+    id: "faq-photos",
+    order: 25,
+    q: "Are the children in your photos real?",
+    a: "Many images on this site are illustrative and marked that way, to protect children's privacy. We never publish a child's full name, an identifying photo or a precise location without written consent from a parent or guardian.",
+    placements: ["safeguarding", "about"],
+    locked: false,
+  },
+  {
+    id: "faq-where-money-goes",
+    order: 30,
+    q: "How do I know where my donation goes?",
+    a: "Every cause on our [donate page](/donate) shows how gifts to it are planned to be spent, and you can choose a programme or appeal when you give. Our [impact page](/impact) shows where the money went each year.",
+    placements: ["donate", "programme"],
+    locked: false,
+  },
+  {
+    id: "faq-receipt",
+    order: 31,
+    q: "Will I get a receipt for my gift?",
+    a: "Yes. Once your gift has been received and confirmed, we email you a receipt with its reference number. Please keep it for your records.",
+    placements: ["donate"],
+    locked: false,
+  },
+  {
+    id: "faq-monthly",
+    order: 32,
+    q: "Can I give every month, and can I stop?",
+    a: "Yes. Choose a monthly gift when you donate. You can change or cancel it at any time from the link in your emails, or by [contacting us](/contact?category=donation).",
+    placements: ["donate"],
+    locked: false,
+  },
+  {
+    id: "faq-volunteer-remote",
+    order: 40,
+    q: "Can I volunteer from outside The Gambia?",
+    a: "Yes. Fundraising, communications, research, administration and technology support can often be done remotely. Tell us where you are and what you can offer when you [apply to volunteer](/get-involved/volunteer).",
+    placements: ["involved"],
+    locked: false,
+  },
+  {
+    id: "faq-partner-kinds",
+    order: 41,
+    q: "What kinds of organisations partner with Haven?",
+    a: "Schools, clinics, children's homes, legal practices, businesses, foundations and community groups. Partners take referrals, sponsor places, share expertise or support a programme. [Start a conversation](/get-involved/partner).",
+    placements: ["involved", "programme"],
+    locked: false,
+  },
+  {
+    id: "faq-volunteer-checks",
+    order: 42,
+    q: "Do volunteers go through safeguarding checks?",
+    a: "Yes. Everyone who works with children through Haven goes through safe-recruitment checks and agrees to our [Child Safeguarding Policy](/policies/safeguarding) and code of conduct.",
+    placements: ["involved", "safeguarding"],
+    locked: false,
+  },
+  {
+    id: "faq-what-is-haven",
+    order: 50,
+    q: "What is Haven?",
+    a: "Haven is a non-profit that protects vulnerable children and supports families in very difficult circumstances, connecting them with education, healthcare, counselling, legal assistance and community-based support.",
+    placements: ["about"],
+    locked: false,
+  },
+  {
+    id: "faq-where-we-work",
+    order: 51,
+    q: "Where does Haven work?",
+    a: "Haven is rooted in The Gambia, with offices in Kanifing and California, and reaches out to children and families wherever the need is. You can see the countries we reach on our [About page](/about#where-we-work).",
+    placements: ["about"],
+    locked: false,
+  },
+];

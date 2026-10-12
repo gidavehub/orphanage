@@ -1,0 +1,11 @@
+{
+  "id": "evt_fixture_customer_1",
+  "object": "event",
+  "type": "customer.created",
+  "api_version": "fixture",
+  "created": 1791700000,
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": null,
+  "data": { "object": { "id": "cus_fixture_1", "object": "customer" } }
+}

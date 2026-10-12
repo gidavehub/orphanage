@@ -1,0 +1,28 @@
+{
+  "id": "evt_fixture_external_1",
+  "object": "event",
+  "type": "checkout.session.completed",
+  "api_version": "fixture",
+  "created": 1791700000,
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": null,
+  "data": {
+    "object": {
+      "id": "cs_test_fixtureExternal1",
+      "object": "checkout.session",
+      "mode": "payment",
+      "status": "complete",
+      "payment_status": "paid",
+      "livemode": false,
+      "customer": null,
+      "subscription": null,
+      "payment_intent": "pi_fixture_external_1",
+      "amount_total": 2500,
+      "currency": "usd",
+      "customer_details": { "email": "fixture.donor@example.org", "name": "Fixture Donor" },
+      "invoice": null,
+      "metadata": {}
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "Haven team",
+  "short_name": "Haven",
+  "description": "The Haven team space: requests, giving, counselling and the website.",
+  "start_url": "/admin",
+  "scope": "/admin",
+  "display": "standalone",
+  "background_color": "#f4f1ec",
+  "theme_color": "#1f715a",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

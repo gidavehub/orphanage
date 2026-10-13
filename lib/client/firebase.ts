@@ -73,7 +73,7 @@ function messageFor(code: string | undefined): string {
     case "auth/user-disabled":
       return "This account is paused. Please ask a super admin.";
     case "auth/network-request-failed":
-      return "We couldn't reach the sign-in service. Please check your connection and try again.";
+      return "We couldn't reach Google's sign-in service from this computer. Please check the internet connection, make sure the computer's date and time are set automatically, and pause any ad-blocker, VPN or antivirus web protection for this site, then try again.";
     case "auth/invalid-verification-code":
     case "auth/code-expired":
       return "That code didn't work. Codes change every 30 seconds, so please try the newest one.";
@@ -92,13 +92,24 @@ async function tokenAndSignOut(auth: Auth, user: User): Promise<string> {
   return token;
 }
 
+/** Runs a sign-in call, trying once more after a moment when the network dropped the first try. */
+async function withRetry<T>(call: () => Promise<T>): Promise<T> {
+  try {
+    return await call();
+  } catch (err) {
+    if (errorCode(err) !== "auth/network-request-failed") throw err;
+    await new Promise((r) => setTimeout(r, 1200));
+    return call();
+  }
+}
+
 /** Email and password sign-in. A required second factor parks the resolver for the code step. */
 export async function signInWithPassword(email: string, password: string): Promise<FirebaseSignInResult> {
   const auth = getFirebaseAuth();
   if (!auth) return { kind: "error", message: "Sign-in isn't set up here yet." };
   pendingResolver = null;
   try {
-    const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
+    const cred = await withRetry(() => signInWithEmailAndPassword(auth, email.trim(), password));
     return { kind: "ok", idToken: await tokenAndSignOut(auth, cred.user) };
   } catch (err) {
     if (errorCode(err) === "auth/multi-factor-auth-required") {
@@ -127,7 +138,7 @@ export async function resolveSignInCode(code: string): Promise<FirebaseSignInRes
   if (!hint) return { kind: "error", message: "Please sign in again." };
   try {
     const assertion = TotpMultiFactorGenerator.assertionForSignIn(hint.uid, code.replace(/\D/g, ""));
-    const cred = await resolver.resolveSignIn(assertion);
+    const cred = await withRetry(() => resolver.resolveSignIn(assertion));
     pendingResolver = null;
     return { kind: "ok", idToken: await tokenAndSignOut(auth, cred.user) };
   } catch (err) {

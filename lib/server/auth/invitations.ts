@@ -2,8 +2,9 @@ import "server-only";
 
 // Team invitations (admin-ux §6.14; PLAN D88). A super admin invites someone by name, email and role;
 // they get `staff_invite` with /admin/invite/<token> (72 hours). The token is never stored: the record
-// lives at invitations/{sha256(token)}. Accepting sets a password, creates the account and the staff
-// profile, and signs them in. Resending issues a fresh link (the old one stops working).
+// lives at invitations/{sha256(token)}. Accepting sets a password and creates the account and the staff
+// profile; practice mode then signs them in, Firebase mode sends them to sign in (where a role that
+// needs a code sets one up). Resending issues a fresh link (the old one stops working).
 
 import { actionError, actionOk, type ActionResult } from "@/lib/forms/types";
 import type { Invitation } from "@/lib/model/domain/staff";
@@ -11,7 +12,8 @@ import type { Millis, Uid } from "@/lib/model/enums";
 import { ROLES, VIEWER_SCOPES, type Role, type ViewerScope } from "@/lib/model/permissions";
 import type { Viewer } from "@/lib/model/viewer";
 import { actorOf, auditTx } from "@/lib/server/audit";
-import { createLocalAccount, findLocalAccountByEmail } from "@/lib/server/auth/local";
+import { createFirebaseUser, deleteFirebaseUser } from "@/lib/server/auth/firebase";
+import { buildStaffProfile, createLocalAccount, findLocalAccountByEmail } from "@/lib/server/auth/local";
 import { checkPasswordPolicy } from "@/lib/server/auth/password";
 import { getStore } from "@/lib/server/db";
 import { C, docPath } from "@/lib/server/db/collections";
@@ -117,14 +119,22 @@ export async function peekInvitation(token: string): Promise<{ displayName: stri
   return { displayName: inv.displayName, email: inv.email, roles: inv.roles };
 }
 
-/** Accepts an invitation with a new password (practice mode creates the local account). */
+const USED = "This invitation has expired or was already used. Ask your super admin for a new one.";
+
+/**
+ * Accepts an invitation with a new password: practice mode creates the local account; Firebase mode
+ * creates the Firebase user (email verified: the link went to it), then claims the invitation and
+ * writes the staff profile in one transaction. A lost race removes the user it just created.
+ */
 export async function acceptInvitation(token: string, password: string): Promise<{ ok: true; uid: Uid } | { ok: false; message: string; field?: string }> {
   const id = sha256Hex(token);
   const inv = await getStore().get<Invitation>(docPath("invitations", id));
-  if (!inv || inv.acceptedAt || inv.revokedAt || inv.expiresAt <= Date.now()) return { ok: false, message: "This invitation has expired or was already used. Ask your super admin for a new one." };
+  if (!inv || inv.acceptedAt || inv.revokedAt || inv.expiresAt <= Date.now()) return { ok: false, message: USED };
   const problem = checkPasswordPolicy(password, { email: inv.email, name: inv.displayName });
   if (problem) return { ok: false, message: problem, field: "password" };
-  if (resolveBackend() !== "local") return { ok: false, message: "Accounts are created through Haven's sign-in service. Ask your super admin to finish setting you up." };
+  const backend = resolveBackend();
+  if (backend === "firestore") return acceptWithFirebase(id, inv, password);
+  if (backend !== "local") return { ok: false, message: "Haven's sign-in isn't switched on yet. Please try again later." };
   let uid: Uid;
   try {
     uid = await createLocalAccount({ email: inv.email, displayName: inv.displayName, roles: inv.roles, viewerScopes: inv.viewerScopes, invitedBy: inv.invitedBy, password, authProvider: "local" });
@@ -136,5 +146,42 @@ export async function acceptInvitation(token: string, password: string): Promise
     tx.update(docPath("invitations", id), { acceptedAt: Date.now(), createdUid: uid });
     auditTx(tx, { actor: { kind: "staff", uid, name: inv.displayName, roles: inv.roles }, action: "staff.invite_accept", area: "staff", summary: `${inv.displayName} accepted their invitation`, feed: true, sensitive: true, targetPath: docPath("staff", uid) });
   });
+  return { ok: true, uid };
+}
+
+async function acceptWithFirebase(id: string, inv: Invitation, password: string): Promise<{ ok: true; uid: Uid } | { ok: false; message: string; field?: string }> {
+  let uid: Uid;
+  try {
+    uid = await createFirebaseUser({ email: inv.email, password, displayName: inv.displayName });
+  } catch (err) {
+    const code = String((err as { code?: unknown }).code ?? "");
+    log.warn("auth.accept_failed", { code: code || "unknown" });
+    if (code === "auth/email-already-exists") return { ok: false, message: "An account with this email already exists. Sign in instead, or use “Forgot your password?”." };
+    if (code === "auth/invalid-password" || code === "auth/password-does-not-meet-requirements") {
+      return { ok: false, message: "Please choose a password of at least 12 characters.", field: "password" };
+    }
+    return { ok: false, message: "We couldn't create your account just now. Please try again in a minute." };
+  }
+  const path = docPath("invitations", id);
+  const claimed = await getStore()
+    .runTransaction(async (tx) => {
+      const cur = await tx.get<Invitation>(path);
+      if (!cur || cur.acceptedAt || cur.revokedAt || cur.expiresAt <= Date.now()) return false;
+      tx.create(
+        docPath("staff", uid),
+        buildStaffProfile(uid, { email: cur.email, displayName: cur.displayName, roles: cur.roles, viewerScopes: cur.viewerScopes, invitedBy: cur.invitedBy, authProvider: "password" }),
+      );
+      tx.update(path, { acceptedAt: Date.now(), createdUid: uid });
+      auditTx(tx, { actor: { kind: "staff", uid, name: cur.displayName, roles: cur.roles }, action: "staff.invite_accept", area: "staff", summary: `${cur.displayName} accepted their invitation`, feed: true, sensitive: true, targetPath: docPath("staff", uid) });
+      return true;
+    })
+    .catch((err) => {
+      log.error("auth.accept_claim_failed", { err });
+      return false;
+    });
+  if (!claimed) {
+    await deleteFirebaseUser(uid).catch((err) => log.error("auth.accept_cleanup_failed", { err }));
+    return { ok: false, message: USED };
+  }
   return { ok: true, uid };
 }

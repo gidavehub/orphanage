@@ -59,7 +59,22 @@ async function SignInPanel({ searchParams }: { searchParams: SearchParams }) {
     );
   }
 
-  if (backend === "firestore") return <FirebaseSignInForm next={next} />;
+  if (backend === "firestore") {
+    return (
+      <div className="grid gap-6">
+        {first(sp.welcome) === "1" ? (
+          <Notice tone="success" title="Your account is ready" compact>
+            Sign in with your email and the password you just chose.
+          </Notice>
+        ) : first(sp.reset) === "1" ? (
+          <Notice tone="success" title="Password changed" compact>
+            Your new password is saved. Sign in with it below.
+          </Notice>
+        ) : null}
+        <FirebaseSignInForm next={next} />
+      </div>
+    );
+  }
 
   if (await needsFirstAdmin()) {
     return (

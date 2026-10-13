@@ -106,6 +106,11 @@ export async function createFirebaseUser(input: { email: string; password: strin
   return user.uid;
 }
 
+/** Removes a Firebase user that was created but never got a staff profile (a lost invitation race). */
+export async function deleteFirebaseUser(uid: Uid): Promise<void> {
+  await auth().deleteUser(uid);
+}
+
 /** A password-reset link from Firebase (sent through the outbox as staff_password_reset; A9). */
 export async function firebasePasswordResetLink(email: string, continueUrl?: string): Promise<string> {
   return auth().generatePasswordResetLink(email, continueUrl ? { url: continueUrl } : undefined);

@@ -15,7 +15,7 @@ const LENGTH = 6;
  * /admin/login parked in memory, then exchanges the token for a session and reloads into the admin.
  * There are no backup codes (Identity Platform TOTP has none): recovery is a super-admin reset.
  */
-export function CodeForm({ next, remember, justSetUp = false }: { next: string; remember: boolean; justSetUp?: boolean }) {
+export function CodeForm({ next, remember }: { next: string; remember: boolean }) {
   const [digits, setDigits] = useState<string[]>(() => Array(LENGTH).fill(""));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,7 +89,7 @@ export function CodeForm({ next, remember, justSetUp = false }: { next: string; 
       <fieldset className="grid gap-3">
         <legend className="text-[15px] font-bold text-ink">{COPY["auth.code"]}</legend>
         <p id="code-hint" className="text-[14px] leading-relaxed text-body">
-          {justSetUp ? "Your sign-in code is saved. Enter the newest code your app shows for Haven to finish signing in." : COPY["auth.codeHint"]}
+          {COPY["auth.codeHint"]}
         </p>
         <div className="flex justify-between gap-2" role="group" aria-describedby="code-hint">
           {digits.map((d, i) => (

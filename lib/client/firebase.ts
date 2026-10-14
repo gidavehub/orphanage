@@ -76,7 +76,7 @@ function messageFor(code: string | undefined): string {
       return "We couldn't reach Google's sign-in service from this computer. Please check the internet connection, make sure the computer's date and time are set automatically, and pause any ad-blocker, VPN or antivirus web protection for this site, then try again.";
     case "auth/invalid-verification-code":
     case "auth/code-expired":
-      return "That code didn't work. Codes change every 30 seconds, so please try the newest one.";
+      return "That code didn't work. Codes change every 30 seconds: wait for the next one and try it. If Haven appears more than once in your app, use the newest entry, or ask a super admin to reset your code.";
     default:
       return "That sign-in didn't work. Please try again.";
   }
@@ -163,54 +163,98 @@ export async function reauthenticate(email: string, password: string): Promise<F
 /* ── First sign-in code (TOTP enrolment) ─────────────────────────────── */
 
 // Roles that need a code (D88) set one up at their first sign-in: the server has just checked the
-// password and the staff record (POST /api/auth/session answered "enrol_mfa"), so the person signs
-// in again here, gets a new authenticator secret, and confirms one code to save it on the account.
-// The signed-in user and the secret live in memory only, for this page.
+// password and the staff record (POST /api/auth/session answered "enrol_mfa"). Here the person gets
+// one authenticator secret (kept for the whole set-up, so retries never need a new scan) and
+// confirms one code. Saving signs in again first, so a slow first scan (up to Identity Platform's
+// 15-minute limit) never fails on an old sign-in, and the token from saving already counts as signed
+// in with a code: the person goes straight in, with no second code to type. (Typing the code just
+// used to save on a separate step is rejected by Identity Platform, which made that step fail.)
+// Everything here lives in memory only, for this page.
 
-let setupUser: User | null = null;
 let setupSecret: TotpSecret | null = null;
+let setupLogin: { email: string; password: string } | null = null;
 
-export type CodeSetupStart = { kind: "ok"; secretKey: string; uri: string } | { kind: "error"; message: string };
+export type CodeSetupStart =
+  | { kind: "ok"; secretKey: string; uri: string; accountName: string; deadline: number }
+  | { kind: "has_code"; message: string }
+  | { kind: "error"; message: string };
 
-/** Starts setting up a sign-in code: a fresh password sign-in, then a new authenticator secret. */
+/** Starts setting up a sign-in code: a password sign-in, then one new authenticator secret. */
 export async function startCodeSetup(email: string, password: string): Promise<CodeSetupStart> {
   const auth = getFirebaseAuth();
   if (!auth) return { kind: "error", message: "Sign-in isn't set up here yet." };
   await cancelCodeSetup();
   try {
-    const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
-    const secret = await TotpMultiFactorGenerator.generateSecret(await multiFactor(cred.user).getSession());
-    setupUser = cred.user;
+    const cred = await withRetry(() => signInWithEmailAndPassword(auth, email.trim(), password));
+    const secret = await withRetry(async () => TotpMultiFactorGenerator.generateSecret(await multiFactor(cred.user).getSession()));
+    const accountName = cred.user.email ?? email.trim();
     setupSecret = secret;
-    return { kind: "ok", secretKey: secret.secretKey, uri: secret.generateQrCodeUrl(cred.user.email ?? email.trim(), "Haven") };
+    setupLogin = { email: email.trim(), password };
+    await signOut(auth).catch(() => {});
+    const deadline = Date.parse(secret.enrollmentCompletionDeadline);
+    return {
+      kind: "ok",
+      secretKey: secret.secretKey,
+      uri: secret.generateQrCodeUrl(accountName, "Haven"),
+      accountName,
+      deadline: Number.isFinite(deadline) ? deadline : Date.now() + 14 * 60_000,
+    };
   } catch (err) {
     const code = errorCode(err);
     await signOut(auth).catch(() => {});
-    if (code === "auth/multi-factor-auth-required") return { kind: "error", message: "This account already has a sign-in code. Please sign in again and enter it." };
+    if (code === "auth/multi-factor-auth-required") return { kind: "has_code", message: "This account already has a sign-in code. Sign in and enter the code from your app." };
     if (code === "auth/unverified-email") return { kind: "error", message: "This account's email isn't confirmed yet. Please ask a super admin to send you a new invitation." };
     return { kind: "error", message: messageFor(code) };
   }
 }
 
-/** Confirms the first code from the authenticator app and saves the code on the account. */
-export async function finishCodeSetup(code: string): Promise<{ kind: "ok" } | { kind: "error"; message: string }> {
+export type CodeSetupFinish =
+  | { kind: "ok"; idToken: string }
+  /** The 15 minutes to finish ran out: start again with a new secret (and a new scan). */
+  | { kind: "expired"; message: string }
+  | { kind: "has_code"; message: string }
+  | { kind: "error"; message: string };
+
+/**
+ * Confirms the first code and saves it on the account. Signs in again just before saving (a fresh
+ * sign-in, whatever the time spent scanning), then returns the ID token from saving: it already
+ * carries the second factor, so the caller exchanges it for a session straight away.
+ */
+export async function finishCodeSetup(code: string): Promise<CodeSetupFinish> {
   const auth = getFirebaseAuth();
-  const user = setupUser;
   const secret = setupSecret;
-  if (!auth || !user || !secret) return { kind: "error", message: "Please sign in again to set up your code." };
+  const login = setupLogin;
+  if (!auth || !secret || !login) return { kind: "error", message: "Please sign in again to set up your code." };
+  const deadline = Date.parse(secret.enrollmentCompletionDeadline);
+  if (Number.isFinite(deadline) && Date.now() > deadline) {
+    return { kind: "expired", message: "Setting up took longer than 15 minutes, so that code has expired. Here's a new one to scan." };
+  }
   try {
-    await multiFactor(user).enroll(TotpMultiFactorGenerator.assertionForEnrollment(secret, code.replace(/\D/g, "")), "Authenticator app");
+    const cred = await withRetry(() => signInWithEmailAndPassword(auth, login.email, login.password));
+    await withRetry(() => multiFactor(cred.user).enroll(TotpMultiFactorGenerator.assertionForEnrollment(secret, code.replace(/\D/g, "")), "Authenticator app"));
+    const idToken = await cred.user.getIdToken(true);
     await cancelCodeSetup();
-    return { kind: "ok" };
+    return { kind: "ok", idToken };
   } catch (err) {
-    return { kind: "error", message: messageFor(errorCode(err)) };
+    const c = errorCode(err);
+    await signOut(auth).catch(() => {});
+    if (c === "auth/multi-factor-auth-required" || c === "auth/second-factor-already-in-use" || c === "auth/maximum-second-factor-count-exceeded") {
+      return { kind: "has_code", message: "This account already has a sign-in code. Sign in and enter the code from your app." };
+    }
+    if (c === "auth/invalid-multi-factor-session" || c === "auth/missing-multi-factor-session" || c === "auth/totp-challenge-timeout") {
+      return { kind: "expired", message: "That set-up timed out. Here's a new code to scan." };
+    }
+    if (c === "auth/invalid-verification-code" || c === "auth/code-expired" || c === "auth/missing-code") {
+      return { kind: "error", message: "That code didn't match. Make sure you're reading the newest “Haven” entry in your app (delete any older Haven entries from earlier tries), then enter the code it shows now." };
+    }
+    return { kind: "error", message: messageFor(c) };
   }
 }
 
 /** Forgets a code set-up in progress and signs out locally. */
 export async function cancelCodeSetup(): Promise<void> {
-  setupUser = null;
   setupSecret = null;
+  setupLogin = null;
   const auth = getFirebaseAuth();
   if (auth?.currentUser) await signOut(auth).catch(() => {});
 }

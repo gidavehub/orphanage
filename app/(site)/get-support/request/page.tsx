@@ -7,11 +7,12 @@ import { EmergencyBlock } from "@/components/public/help/EmergencyBlock";
 import { itemsOf, textOf, titleOf } from "@/components/public/help/page-copy";
 import { SupportRequestForm } from "@/components/public/help/SupportRequestForm";
 import { Button } from "@/components/ui/Button";
+import { EveryChildNote } from "@/components/public/EveryChildNote";
 import { Notice } from "@/components/ui/Notice";
 import { QuickExit } from "@/components/ui/QuickExit";
 import { Section } from "@/components/ui/Section";
 import { Timeline } from "@/components/ui/Timeline";
-import { getContact, getPage, getProgrammes, getSafety } from "@/lib/content/public";
+import { getContact, getPage, getProgrammes, getSafety, getSiteSettings } from "@/lib/content/public";
 import type { ProgrammeNoticeKind } from "@/lib/content/schema";
 import { routes } from "@/lib/routes";
 import { buildMetadata } from "@/lib/seo/meta";
@@ -42,7 +43,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RequestSupportPage() {
-  const [page, contact, safety, programmes, status] = await Promise.all([getPage("requestSupport"), getContact(), getSafety(), getProgrammes(), getSupportFormStatus()]);
+  const [page, contact, safety, programmes, status, site] = await Promise.all([getPage("requestSupport"), getContact(), getSafety(), getProgrammes(), getSupportFormStatus(), getSiteSettings()]);
   const notice = (kind: ProgrammeNoticeKind, fallback: string) => programmes.flatMap((p) => p.notices).find((n) => n.kind === kind)?.text ?? fallback;
   const nextSteps = itemsOf(page, "success", FALLBACK_NEXT);
   const contactCard = { phone: contact.phone, phoneHref: contact.phoneHref, email: contact.email };
@@ -67,6 +68,7 @@ export default async function RequestSupportPage() {
           form={
             <div className="grid gap-6 [&>*]:min-w-0">
               <EmergencyBlock text={safety.emergencyNotice} contacts={safety.emergencyContacts} compact />
+              <EveryChildNote text={site.everyChild} compact />
               <div className="rounded-[30px] bg-white p-5 shadow-soft sm:p-8">
                 {status.open ? (
                   <SupportRequestForm

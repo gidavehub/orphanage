@@ -92,6 +92,7 @@ export function Footer({ chrome }: { chrome: FooterChrome }) {
             <div>
               <Logo tone="light" className="text-[42px]" />
               <p className="mt-6 max-w-[330px] text-[16px] leading-[1.75] text-white/70">{site.description}</p>
+              {site.everyChild ? <p className="mt-4 max-w-[330px] text-[14px] leading-[1.7] text-white/70">{site.everyChild}</p> : null}
               <div className="mt-8">
                 <Button href={chrome.ctas.donate.href} variant="forest" icon="heart" iconFirst size="lg">
                   {chrome.ctas.donate.label}

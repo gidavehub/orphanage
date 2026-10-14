@@ -6,6 +6,7 @@ import { routes } from "@/lib/routes";
 import { AllocationPanel } from "./AllocationPanel";
 import { CauseList } from "./CauseList";
 import { GiveHero } from "./GiveHero";
+import { EveryChildNote } from "@/components/public/EveryChildNote";
 import { DonateFaq, ReachChild, TrustPanel } from "./GiveSections";
 import { ImpactExamples } from "./ImpactExamples";
 import { OtherWays } from "./OtherWays";
@@ -30,6 +31,8 @@ export type GiveColumnData = {
   steps: Array<{ id: string; title: string; text: string; image?: UiImage }>;
   faqs: Array<{ id: string; q: string; a: string }>;
   registrations: Array<{ label: string; number: string }>;
+  /** settings.site.everyChild. */
+  everyChild: string;
   donationsEmail: string;
   methodsLine: string;
   report: { href: string; label: string };
@@ -91,6 +94,8 @@ export function GiveColumn({ data }: { data: GiveColumnData }) {
           intro={plain(s.reachChild)}
           steps={data.steps}
         />
+
+        <EveryChildNote text={data.everyChild} />
 
         <TrustPanel
           eyebrow={s.trust?.eyebrow}

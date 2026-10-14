@@ -15,6 +15,9 @@ export const siteSeed = {
   altTagline: "Every Child Deserves Safety, Care and Opportunity.",
   description:
     "Haven protects vulnerable children and strengthens families by connecting them with education, healthcare, counselling, legal assistance and community-based support.",
+  // CLIENT: confirm the wording. Shown wherever people ask for help or give (EveryChildNote).
+  everyChild:
+    "Haven helps every child, whatever their nationality, race, ethnicity, religion or belief, language, disability, gender or family background. We decide how to help by a child's needs and safety alone.",
   footerStatement: "Restoring Hope. Protecting Childhood.",
   signOff: "for every child.",
   // CLIENT: new copy, to confirm.

@@ -4,12 +4,13 @@ import { StudioSlot } from "@/components/content/StudioSlot";
 import { PageHero } from "@/components/layout/PageHero";
 import { ConcernForm } from "@/components/public/help/ConcernForm";
 import { EmergencyBlock } from "@/components/public/help/EmergencyBlock";
+import { EveryChildNote } from "@/components/public/EveryChildNote";
 import { eyebrowOf, itemsOf, textOf, titleOf } from "@/components/public/help/page-copy";
 import { QuickExit } from "@/components/ui/QuickExit";
 import { Section } from "@/components/ui/Section";
 import { SectionIntro } from "@/components/ui/SectionIntro";
 import { Timeline } from "@/components/ui/Timeline";
-import { getContact, getPage, getSafety } from "@/lib/content/public";
+import { getContact, getPage, getSafety, getSiteSettings } from "@/lib/content/public";
 import { routes } from "@/lib/routes";
 import { buildMetadata } from "@/lib/seo/meta";
 import { baseUrl } from "@/lib/server/url";
@@ -43,7 +44,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ReportConcernPage() {
-  const [page, contact, safety] = await Promise.all([getPage("reportConcern"), getContact(), getSafety()]);
+  const [page, contact, safety, site] = await Promise.all([getPage("reportConcern"), getContact(), getSafety(), getSiteSettings()]);
   const steps = itemsOf(page, "whatHappens", FALLBACK_STEPS);
   const staffOnly = textOf(page, "whatHappens", "Only approved safeguarding personnel can see reports.");
   const consentBlocks = page.sections.consent?.body ?? [];
@@ -74,6 +75,7 @@ export default async function ReportConcernPage() {
 
       <Section tone="white" pad="none" width="form" cv={false} label="Report a concern" className="pb-20 pt-10 md:pb-24 md:pt-14">
         <EmergencyBlock text={safety.emergencyNotice} contacts={safety.emergencyContacts} />
+        <EveryChildNote text={site.everyChild} compact className="mt-4" />
         <div className="mt-10 rounded-[30px] border border-line bg-white p-5 shadow-soft sm:p-8">
           <ConcernForm
             action={submitConcern}

@@ -55,7 +55,7 @@ export const aboutPage: PageSeed = {
         ["Child-centred", "Every decision starts with the child's safety, dignity and best interests."],
         ["Compassion", "We meet every child and family with kindness and without judgement."],
         ["Integrity", "We do what we say, and we say what we do."],
-        ["Inclusion", "We serve children of every background, faith and ability."],
+        ["Inclusion", "We help every child, whatever their nationality, race, religion, language or ability."],
         ["Accountability", "We are transparent about our work, our finances and our impact."],
         ["Collaboration", "Lasting change is built with communities, professionals and partners."],
         ["Confidentiality", "Personal stories and records are protected and shared only with consent."],

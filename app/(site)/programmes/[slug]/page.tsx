@@ -224,6 +224,7 @@ export default async function ProgrammePage({ params }: PageProps<"/programmes/[
           text: safety.emergencyNotice,
           contacts: safety.emergencyContacts,
         }}
+        everyChild={site.everyChild}
       />
 
       <div className="relative">

@@ -20,6 +20,8 @@ const DRAFT_REVIEW = { by: "Haven team", reviewer: "internal" as const, at: Date
 const safeguardingBody: B[] = [
   h("Our commitment"),
   p("Haven exists to protect children. Every child has the right to be safe, and the safety and best interests of children come first in everything we do."),
+  h("Every child, equally"),
+  p("Every child has the same right to protection and support, whatever their nationality, race, ethnicity, religion or belief, language, disability, gender or family background, and wherever they come from. We act on every concern about any child, and we decide how to help by a child's needs and safety alone."),
   h("Who this policy applies to"),
   p("This policy applies to our trustees, staff, volunteers, contractors and anyone who represents Haven, in person and online."),
   h("Definitions"),

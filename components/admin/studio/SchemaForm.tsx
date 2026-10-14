@@ -39,6 +39,7 @@ type JS = Record<string, unknown> & {
 type Ctx = { media: MediaPickerItem[]; errors: Record<string, string>; videoPaths: string[]; disabled: boolean };
 
 const LABELS: Record<string, string> = {
+  everyChild: "Who we help (shown on programme, help, concern and donate pages)",
   eyebrow: "Small line above the title",
   title: "Title",
   titleLines: "Title lines",

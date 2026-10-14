@@ -81,6 +81,7 @@ export async function loadGiveColumn(slug: string): Promise<GiveColumnData | nul
     steps: home.journey.steps.map((st) => ({ id: st.id, title: st.title, text: st.text, image: st.image })),
     faqs: faqs.map((f) => ({ id: f.id, q: f.q, a: f.a })),
     registrations: site.registrations,
+    everyChild: site.everyChild,
     donationsEmail: contact.teamEmails.donations,
     methodsLine: line,
     report: report

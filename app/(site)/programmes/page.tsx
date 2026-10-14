@@ -9,11 +9,12 @@ import { FundCard, ProgrammeGrid } from "@/components/public/programmes/Programm
 import { Focus } from "@/components/sections/Focus";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { Button } from "@/components/ui/Button";
+import { EveryChildNote } from "@/components/public/EveryChildNote";
 import { Notice } from "@/components/ui/Notice";
 import { Reveal } from "@/components/ui/Reveal";
 import { Section } from "@/components/ui/Section";
 import { SectionIntro } from "@/components/ui/SectionIntro";
-import { getCauses, getHomeContent, getPage, getProgrammes } from "@/lib/content/public";
+import { getCauses, getHomeContent, getPage, getProgrammes, getSiteSettings } from "@/lib/content/public";
 import { routes } from "@/lib/routes";
 import { buildMetadata } from "@/lib/seo/meta";
 import { baseUrl } from "@/lib/server/url";
@@ -38,7 +39,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ProgrammesPage() {
-  const [page, programmes, causes, home] = await Promise.all([getPage("programmes"), getProgrammes(), getCauses({ kind: "programme" }), getHomeContent()]);
+  const [page, programmes, causes, home, site] = await Promise.all([getPage("programmes"), getProgrammes(), getCauses({ kind: "programme" }), getHomeContent(), getSiteSettings()]);
   const origin = baseUrl();
   const decide = paragraphsOf(page, "howWeDecide");
   const decideLines = decide.length ? decide : FALLBACK_DECIDE;
@@ -104,6 +105,7 @@ export default async function ProgrammesPage() {
             </p>
           ))}
         </Notice>
+        <EveryChildNote text={site.everyChild} className="mx-auto mt-4 max-w-[860px]" />
         <StepCards surface="light" items={home.journey.steps.map((s) => ({ title: s.title, text: s.text }))} className="mt-12" />
       </Section>
 

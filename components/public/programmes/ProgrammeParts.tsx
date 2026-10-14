@@ -12,6 +12,7 @@ import { Reveal } from "@/components/ui/Reveal";
 import { DonatHeading } from "@/components/ui/SectionHeading";
 import type { ProgrammeNoticeView } from "@/lib/content/types";
 import type { UiImage } from "@/lib/model/ui";
+import { EveryChildNote } from "@/components/public/EveryChildNote";
 import { cn } from "@/lib/cn";
 
 /* ── Notices band (public-pages §3.4.2; PLAN D41) ──────────────────────── */
@@ -24,11 +25,14 @@ import { cn } from "@/lib/cn";
 export function ProgrammeNotices({
   notices,
   emergency,
+  everyChild,
 }: {
   notices: ProgrammeNoticeView[];
   emergency: { text: string; contacts: ReadonlyArray<{ country: string; label: string; number: string }> };
+  /** settings.site.everyChild, after the programme's own notices. */
+  everyChild?: string;
 }) {
-  if (!notices.length) return null;
+  if (!notices.length && !everyChild) return null;
   return (
     <div className="bg-white pt-8 md:pt-10">
       <div className="wrap grid max-w-[980px] gap-3">
@@ -45,6 +49,7 @@ export function ProgrammeNotices({
             </Notice>
           ),
         )}
+        <EveryChildNote text={everyChild} compact />
       </div>
     </div>
   );

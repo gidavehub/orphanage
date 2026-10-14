@@ -13,12 +13,13 @@ import { StepCards } from "@/components/public/help/StepCards";
 import { ArrowLink } from "@/components/ui/ArrowLink";
 import { Button } from "@/components/ui/Button";
 import { IconDisc } from "@/components/ui/IconDisc";
+import { EveryChildNote } from "@/components/public/EveryChildNote";
 import { Notice } from "@/components/ui/Notice";
 import { QuickExit } from "@/components/ui/QuickExit";
 import { Reveal } from "@/components/ui/Reveal";
 import { Section } from "@/components/ui/Section";
 import { SectionIntro } from "@/components/ui/SectionIntro";
-import { getContact, getFaqs, getPage, getSafety } from "@/lib/content/public";
+import { getContact, getFaqs, getPage, getSafety, getSiteSettings } from "@/lib/content/public";
 import { img } from "@/lib/media/pipeline";
 import { routes } from "@/lib/routes";
 import { buildMetadata } from "@/lib/seo/meta";
@@ -43,7 +44,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function GetSupportPage() {
-  const [page, contact, safety, faqs, formStatus] = await Promise.all([getPage("getSupport"), getContact(), getSafety(), getFaqs({ placement: "support" }), getSupportFormStatus()]);
+  const [page, contact, safety, faqs, formStatus, site] = await Promise.all([getPage("getSupport"), getContact(), getSafety(), getFaqs({ placement: "support" }), getSupportFormStatus(), getSiteSettings()]);
   const request = ctaOf(page, "actions", { label: "Request Support", href: routes.request() });
   const helpTypes = itemsOf(page, "helpTypes", [
     { title: "Child-protection concern", icon: "protection" },
@@ -151,6 +152,7 @@ export default async function GetSupportPage() {
                 );
               })}
             </Reveal>
+            <EveryChildNote text={site.everyChild} compact className="mt-7" />
           </div>
           <Reveal className="relative">
             <div className="relative isolate overflow-hidden rounded-card bg-cream p-7 md:p-9">

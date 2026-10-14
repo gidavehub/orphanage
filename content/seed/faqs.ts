@@ -188,4 +188,12 @@ export const faqSeeds: ItemSeed<"faqs">[] = [
     placements: ["about"],
     locked: false,
   },
+  {
+    id: "faq-every-child",
+    order: 52,
+    q: "Does Haven help children of any nationality, race or religion?",
+    a: "Yes. Haven helps every child, whatever their nationality, race, ethnicity, religion or belief, language, disability, gender or family background, and wherever they come from. We decide how to help by a child's needs and safety alone, and we never ask a family to share or change their beliefs to receive support.",
+    placements: ["support", "programme", "safeguarding", "about", "donate"],
+    locked: false,
+  },
 ];

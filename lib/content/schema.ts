@@ -344,6 +344,8 @@ export const SiteSettingsSchema = z.object({
   tagline: line(70),
   altTagline: line(70),
   description: longText(200),
+  /** "We help every child, whatever their…": programme pages, Get Support, Report a Concern, Donate, footer. */
+  everyChild: longText(240),
   /** The giant footer line. */
   footerStatement: line(44),
   /** The text after "Made with ♥ ". */

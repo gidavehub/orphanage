@@ -123,8 +123,8 @@ function MemberRow({ m, now, muted }: { m: TeamMemberDTO; now: Millis; muted?: b
           </p>
         </div>
         {m.mfa.required ? (
-          <span title={m.mfa.enrolled ? "Uses a sign-in code" : "Sign-in code not set up yet"} className={cn("hidden shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-bold sm:inline-flex", m.mfa.enrolled ? "bg-mint text-deep" : "bg-marigold-100 text-umber")}>
-            <ShieldCheck aria-hidden className="size-3.5" /> {m.mfa.enrolled ? "Code on" : "Code needed"}
+          <span title="Gets a sign-in code by email each time" className="hidden shrink-0 items-center gap-1 rounded-full bg-mint px-2.5 py-1 text-[12px] font-bold text-deep sm:inline-flex">
+            <ShieldCheck aria-hidden className="size-3.5" /> Code by email
           </span>
         ) : null}
         <ChevronRight aria-hidden className="size-5 shrink-0 text-body transition-transform group-hover:translate-x-0.5" />

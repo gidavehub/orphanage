@@ -225,7 +225,7 @@ export function hasAnyPermission(perms: ReadonlySet<Permission> | readonly Permi
   return anyOf.some((p) => hasPermission(perms, p));
 }
 
-/** Roles that must use a TOTP sign-in code in Firebase mode (D88). */
+/** Roles that finish signing in with an emailed 6-digit code in Firebase mode (D88; no authenticator app since 2026-10-19). */
 export const MFA_REQUIRED_ROLES: readonly Role[] = ["super_admin", "safeguarding_officer", "finance_officer"];
 
 /** Which roles triage each contact-form category (data-model §6.2). Super admins see every category. */

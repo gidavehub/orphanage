@@ -1,12 +1,11 @@
 "use client";
 
-import { useActionState, useRef, useState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
 import { Field } from "@/components/ui/form/Field";
-import { Input } from "@/components/ui/form/Input";
 import { SubmitButton } from "@/components/ui/form/SubmitButton";
 import { IDLE, type FormState } from "@/lib/forms/types";
-import { reauthenticate, resolveSignInCode } from "@/lib/client/firebase";
+import { reauthenticate } from "@/lib/client/firebase";
 import { FormAlert } from "./FormAlert";
 import { PasswordInput } from "./PasswordInput";
 
@@ -14,8 +13,8 @@ type Action = (prev: FormState<"password">, fd: FormData) => Promise<FormState<"
 
 /**
  * "Confirm it's you" (step-up, D87) and the idle unlock (D86). Practice mode posts the password to
- * the Server Action; Firebase mode signs in again in the browser (with the sign-in code when the
- * account has one) and posts the fresh ID token instead. The action redirects back to `next`.
+ * the Server Action; Firebase mode signs in again in the browser and posts the fresh ID token instead
+ * (the session keeps the second step it already had). The action redirects back to `next`.
  */
 export function ConfirmForm({
   action,
@@ -34,8 +33,6 @@ export function ConfirmForm({
   const [state, formAction] = useActionState<FormState<"password">, FormData>(action, IDLE as FormState<"password">);
   const [pending, startTransition] = useTransition();
   const [clientError, setClientError] = useState<string | null>(null);
-  const [needsCode, setNeedsCode] = useState(false);
-  const codeRef = useRef<HTMLInputElement>(null);
 
   const fieldErrors = state.status === "error" ? (state.fieldErrors ?? {}) : {};
   const serverMessage = state.status === "error" && !fieldErrors.password ? state.message : null;
@@ -51,12 +48,6 @@ export function ConfirmForm({
     e.preventDefault();
     setClientError(null);
     const fd = new FormData(e.currentTarget);
-    if (needsCode) {
-      const res = await resolveSignInCode(String(fd.get("code") ?? ""));
-      if (res.kind === "ok") sendToken(res.idToken);
-      else setClientError(res.kind === "error" ? res.message : "Please try again.");
-      return;
-    }
     const password = String(fd.get("password") ?? "");
     if (!password) {
       setClientError("Please enter your password.");
@@ -64,24 +55,15 @@ export function ConfirmForm({
     }
     const res = await reauthenticate(email, password);
     if (res.kind === "ok") sendToken(res.idToken);
-    else if (res.kind === "code_required") {
-      setNeedsCode(true);
-      requestAnimationFrame(() => codeRef.current?.focus());
-    } else setClientError(res.message);
+    else setClientError(res.message);
   }
 
   if (mode === "firebase") {
     return (
       <form onSubmit={onFirebaseSubmit} noValidate className="grid grid-cols-1 gap-5">
-        {needsCode ? (
-          <Field name="code" label="Sign-in code" hint="The 6-digit code from your authenticator app.">
-            <Input ref={codeRef} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={6} required />
-          </Field>
-        ) : (
-          <Field name="password" label="Password" error={fieldErrors.password}>
-            <PasswordInput required autoFocus />
-          </Field>
-        )}
+        <Field name="password" label="Password" error={fieldErrors.password}>
+          <PasswordInput required autoFocus />
+        </Field>
         <div>
           <Button type="submit" variant="forest" block icon="arrow-right" loading={pending}>
             {submitLabel}

@@ -1,36 +1,44 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { COPY } from "@/lib/admin/copy";
-import { clearPendingCode, exchangeForSession, hasPendingCode, resolveSignInCode } from "@/lib/client/firebase";
+import { exchangeForSession, finishWithEmailCode, type EmailCodeStep } from "@/lib/client/firebase";
 import { FormAlert } from "./FormAlert";
 
 const LENGTH = 6;
 
 /**
- * The sign-in code step (admin-ux §6.1; PLAN D88): six large digit boxes with auto-advance, paste of
- * the whole code, the numeric keypad and one-time-code autofill. Completes the Firebase sign-in that
- * /admin/login parked in memory, then exchanges the token for a session and reloads into the admin.
- * There are no backup codes (Identity Platform TOTP has none): recovery is a super-admin reset.
+ * The emailed sign-in code (owner, 2026-10-19: no authenticator app, one-time codes only). Shown
+ * straight after a password sign-in for roles that need a second step: six large digit boxes with
+ * auto-advance, paste of the whole code, the numeric keypad and one-time-code autofill. The ID token
+ * from the password step stays in this component's memory only; a reload starts again.
  */
-export function CodeForm({ next, remember }: { next: string; remember: boolean }) {
+export function CodeForm({
+  idToken,
+  step: firstStep,
+  remember,
+  next,
+  onCancel,
+}: {
+  idToken: string;
+  step: EmailCodeStep;
+  remember: boolean;
+  next: string;
+  onCancel: () => void;
+}) {
+  const [step, setStep] = useState<EmailCodeStep>(firstStep);
   const [digits, setDigits] = useState<string[]>(() => Array(LENGTH).fill(""));
   const [busy, setBusy] = useState(false);
+  const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState<boolean | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [mustRestart, setMustRestart] = useState(false);
   const boxes = useRef<Array<HTMLInputElement | null>>([]);
 
   useEffect(() => {
-    // Module state only exists in this tab's memory; after a reload the sign-in starts again.
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- read once after mount (client-only state)
-    setPending(hasPendingCode());
-  }, []);
-
-  useEffect(() => {
-    if (pending) boxes.current[0]?.focus();
-  }, [pending]);
+    boxes.current[0]?.focus();
+  }, [step]);
 
   function setFrom(index: number, raw: string) {
     const clean = raw.replace(/\D/g, "");
@@ -47,6 +55,11 @@ export function CodeForm({ next, remember }: { next: string; remember: boolean }
     boxes.current[target]?.focus();
   }
 
+  function clearBoxes() {
+    setDigits(Array(LENGTH).fill(""));
+    boxes.current[0]?.focus();
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const code = digits.join("");
@@ -56,28 +69,44 @@ export function CodeForm({ next, remember }: { next: string; remember: boolean }
     }
     setBusy(true);
     setError(null);
-    const result = await resolveSignInCode(code);
-    if (result.kind !== "ok") {
-      setBusy(false);
-      setError(result.kind === "error" ? result.message : "Please sign in again.");
-      setDigits(Array(LENGTH).fill(""));
-      boxes.current[0]?.focus();
+    setNotice(null);
+    const r = await finishWithEmailCode(idToken, step, code, { remember, next });
+    if (r.ok) {
+      // A full load: the admin starts fresh with the new session.
+      window.location.assign(r.next);
       return;
     }
-    const session = await exchangeForSession(result.idToken, { remember, next });
-    if (!session.ok) {
-      setBusy(false);
-      setError(session.message);
-      return;
-    }
-    window.location.assign(session.next);
+    setBusy(false);
+    setError(r.message);
+    if (r.error === "stale" || r.error === "not_staff" || r.error === "invalid") setMustRestart(true);
+    else clearBoxes();
   }
 
-  if (pending === false) {
+  async function resend() {
+    setSending(true);
+    setError(null);
+    setNotice(null);
+    const r = await exchangeForSession(idToken, { remember, next });
+    setSending(false);
+    if (!r.ok && r.emailCode) {
+      setStep(r.emailCode);
+      clearBoxes();
+      setNotice(`A new code is on its way to ${r.emailCode.emailHint}. Use the newest email.`);
+      return;
+    }
+    if (r.ok) {
+      window.location.assign(r.next);
+      return;
+    }
+    setError("That took a little too long. Please sign in again.");
+    setMustRestart(true);
+  }
+
+  if (mustRestart) {
     return (
       <div className="grid gap-5">
-        <p className="text-[16px] leading-relaxed text-body">This step only works straight after you sign in with your password. Please sign in again.</p>
-        <Button href={`/admin/login?next=${encodeURIComponent(next)}`} variant="forest" icon="arrow-right">
+        <FormAlert message={error ?? "Please sign in again."} />
+        <Button type="button" variant="forest" icon="arrow-right" onClick={onCancel}>
           Back to sign in
         </Button>
       </div>
@@ -89,7 +118,8 @@ export function CodeForm({ next, remember }: { next: string; remember: boolean }
       <fieldset className="grid gap-3">
         <legend className="text-[15px] font-bold text-ink">{COPY["auth.code"]}</legend>
         <p id="code-hint" className="text-[14px] leading-relaxed text-body">
-          {COPY["auth.codeHint"]}
+          We emailed a 6-digit code to <span className="font-bold text-ink">{step.emailHint}</span>. Type it here to finish signing in. It works
+          for 10 minutes.
         </p>
         <div className="flex justify-between gap-2" role="group" aria-describedby="code-hint">
           {digits.map((d, i) => (
@@ -114,7 +144,7 @@ export function CodeForm({ next, remember }: { next: string; remember: boolean }
               pattern="[0-9]*"
               maxLength={LENGTH}
               aria-label={`Digit ${i + 1} of ${LENGTH}`}
-              disabled={busy || pending === null}
+              disabled={busy}
               className="h-14 w-full min-w-0 max-w-[56px] rounded-2xl border-[1.5px] border-edge bg-white text-center font-grotesk text-[24px] font-semibold tabular-nums text-ink transition-[border-color,box-shadow] focus:border-forest focus:outline-none focus:ring-4 focus:ring-forest/15"
             />
           ))}
@@ -125,12 +155,21 @@ export function CodeForm({ next, remember }: { next: string; remember: boolean }
           {busy ? COPY["auth.signingIn"] : "Continue"}
         </Button>
         <FormAlert message={error} />
+        {notice ? (
+          <p role="status" className="mt-3 text-[14px] leading-relaxed text-forest">
+            {notice}
+          </p>
+        ) : null}
       </div>
       <p className="text-[14px] leading-relaxed text-body">
-        Lost your phone or authenticator? A super admin can reset your sign-in code.{" "}
-        <Link href="/admin/login" onClick={() => clearPendingCode()} className="font-bold text-forest underline underline-offset-4">
+        No email? Check your spam folder, or{" "}
+        <button type="button" onClick={() => void resend()} disabled={sending || busy} className="font-bold text-forest underline underline-offset-4 disabled:opacity-60">
+          {sending ? "sending…" : "send a new code"}
+        </button>
+        .{" "}
+        <button type="button" onClick={onCancel} className="font-bold text-forest underline underline-offset-4">
           Start again
-        </Link>
+        </button>
       </p>
     </form>
   );

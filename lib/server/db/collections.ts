@@ -53,6 +53,7 @@ export const C = {
   // Staff and auth
   staff: "staff",
   staffSessions: "staffSessions",
+  staffSignInCodes: "staffSignInCodes",
   invitations: "invitations",
   notifications: "notifications",
   // System

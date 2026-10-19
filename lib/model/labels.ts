@@ -563,6 +563,7 @@ export const EMAIL_TEMPLATE_LABEL: Record<EmailTemplateId, string> = {
   data_request_done: "Privacy request complete",
   staff_invite: "Team invitation",
   staff_password_reset: "Password reset",
+  staff_sign_in_code: "Sign-in code",
   staff_access_changed: "Access changed",
   staff_alert: "Something new for you",
   staff_alert_digest: "Morning summary",

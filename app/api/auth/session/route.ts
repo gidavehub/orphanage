@@ -1,7 +1,7 @@
 // POST /api/auth/session (data-model §9.1, PLAN D86–D88): Firebase mode only. The staff sign-in page
 // signs in with firebase/auth and sends { idToken, remember, next } here; we answer with the session
-// cookie set, { next: "enrol_mfa" } (no cookie) for required-MFA roles without a second factor, or an
-// error. Same-origin JSON only; rate-limited per IP hash (login: 10 per 15 minutes).
+// cookie set, { next: "email_code", challengeId, emailHint } (no cookie) for roles that need a second
+// step (a 6-digit code is emailed; POST /api/auth/session/code finishes), or an error. Same-origin JSON only; rate-limited per IP hash (login: 10 per 15 minutes).
 // Local practice mode signs in with the `signIn` Server Action instead, so this answers 404 there.
 
 import { z } from "zod";
@@ -51,8 +51,8 @@ export async function POST(request: Request): Promise<Response> {
     switch (result.kind) {
       case "ok":
         return json({ ok: true, next: safeNextPath(body.next) });
-      case "enrol_mfa":
-        return json({ ok: false, next: "enrol_mfa" });
+      case "code_sent":
+        return json({ ok: false, next: "email_code", challengeId: result.challengeId, emailHint: result.emailHint });
       case "stale":
         return json({ ok: false, error: "stale", message: "Please sign in again." }, 401);
       case "not_staff":

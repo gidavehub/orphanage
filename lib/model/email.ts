@@ -43,6 +43,7 @@ export const EMAIL_TEMPLATE_IDS = [
   // staff
   "staff_invite",
   "staff_password_reset",
+  "staff_sign_in_code",
   "staff_access_changed",
   "staff_alert",
   "staff_alert_digest",

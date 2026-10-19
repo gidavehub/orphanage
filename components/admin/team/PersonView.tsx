@@ -157,7 +157,7 @@ export function PersonView({
           )}
           {p.mfa.required ? (
             <p className="mt-4 flex items-center gap-2 text-[14px] font-semibold text-body">
-              <ShieldCheck aria-hidden className="size-4 text-forest" /> {p.mfa.enrolled ? "Uses a sign-in code" : "Sign-in code not set up yet"}
+              <ShieldCheck aria-hidden className="size-4 text-forest" /> Gets a sign-in code by email each time
             </p>
           ) : null}
         </section>
@@ -175,7 +175,7 @@ export function PersonView({
                   </button>
                   {p.mfa.required && p.mfa.enrolled ? (
                     <button type="button" disabled={pending} onClick={reset} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-line px-4 text-[14.5px] font-bold text-ink hover:border-forest disabled:opacity-50">
-                      <KeyRound aria-hidden className="size-4" /> Reset their sign-in code
+                      <KeyRound aria-hidden className="size-4" /> Remove their old authenticator app
                     </button>
                   ) : null}
                 </>

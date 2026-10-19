@@ -1,9 +1,9 @@
 import "server-only";
 
 // Firebase Authentication (Admin SDK) for staff sign-in in Firestore mode (data-model §9.1–9.2, §9.4;
-// PLAN D86–D88). The browser signs in with firebase/auth (in-memory persistence, TOTP second factor
-// where enrolled), sends the ID token to POST /api/auth/session, and the server mints an httpOnly
-// session cookie. Roles always come from staff/{uid}, never custom claims.
+// PLAN D86–D88). The browser signs in with firebase/auth (in-memory persistence), sends the ID token
+// to POST /api/auth/session, and the server mints an httpOnly session cookie; roles that need a second
+// step finish with an emailed code first (email-code.ts; no authenticator app since 2026-10-19). Roles always come from staff/{uid}, never custom claims.
 // Compiled now; exercised when FIREBASE_SERVICE_ACCOUNT_JSON exists (I8 preflight).
 
 import { getAuth, type Auth, type DecodedIdToken } from "firebase-admin/auth";
@@ -80,7 +80,7 @@ export async function revokeRefreshTokens(uid: Uid): Promise<void> {
   await auth().revokeRefreshTokens(uid);
 }
 
-/** Roles that must use a TOTP code in Firebase mode (D88). */
+/** Roles that must finish signing in with a second step: an emailed code (D88; lib/server/auth/email-code.ts). */
 export function mfaRequiredFor(roles: readonly Role[]): boolean {
   return roles.some((r) => MFA_REQUIRED_ROLES.includes(r));
 }

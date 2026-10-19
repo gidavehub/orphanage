@@ -58,7 +58,7 @@ export const COPY = {
   "auth.practiceChips": "Practice sign-in",
   "auth.firstAdmin": "Create the first super admin",
   "auth.code": "Sign-in code",
-  "auth.codeHint": "Enter the 6-digit code from your authenticator app.",
+  "auth.codeHint": "Enter the 6-digit code we emailed you.",
   "auth.confirmTitle": "Confirm it's you",
   "auth.confirmBody": "For your safety, please sign in again before opening this.",
   "auth.lockedTitle": "Haven is locked",

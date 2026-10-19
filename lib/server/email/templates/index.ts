@@ -373,6 +373,17 @@ const SPECS: Record<EmailTemplateId, Spec> = {
     button: "Choose a new password",
     footer: "staff",
   },
+  staff_sign_in_code: {
+    audience: "staff",
+    replyTo: "none",
+    subject: "Your Haven sign-in code",
+    ref: null,
+    heading: "Your sign-in code",
+    preheader: "Type this code to finish signing in (works for 10 minutes).",
+    main: "Type this code on the Haven sign-in page to finish signing in. It works for 10 minutes. If you didn't just sign in, change your password and tell a super admin.",
+    details: [["Your code", "code"]],
+    footer: "staff",
+  },
   staff_access_changed: {
     audience: "staff",
     replyTo: "none",

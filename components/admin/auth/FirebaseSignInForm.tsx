@@ -1,31 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/form/Checkbox";
 import { Field } from "@/components/ui/form/Field";
 import { Input } from "@/components/ui/form/Input";
 import { COPY } from "@/lib/admin/copy";
-import { exchangeForSession, signInWithPassword } from "@/lib/client/firebase";
-import { CodeSetup } from "./CodeSetup";
+import { exchangeForSession, signInWithPassword, type EmailCodeStep } from "@/lib/client/firebase";
+import { CodeForm } from "./CodeForm";
 import { FormAlert } from "./FormAlert";
 import { PasswordInput } from "./PasswordInput";
 
 /**
  * Firebase-mode sign-in (data-model §9.1; PLAN D86, D88): firebase/auth checks the password in the
  * browser, the ID token is exchanged for Haven's session cookie at POST /api/auth/session, then the
- * page reloads into the admin. Accounts with a sign-in code continue at /admin/login/code; the
- * pending sign-in is held in memory only (lib/client/firebase.ts), so a reload starts again. A role
- * that needs a code but has none yet sets it up here first (CodeSetup).
+ * page reloads into the admin. Roles that need a second step are emailed a 6-digit code and type it
+ * here (CodeForm); no authenticator app. The pending sign-in is held in memory only, so a reload
+ * starts again.
  */
 export function FirebaseSignInForm({ next }: { next: string }) {
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
-  const [setup, setSetup] = useState<{ email: string; password: string; remember: boolean } | null>(null);
+  const [code, setCode] = useState<{ idToken: string; step: EmailCodeStep; remember: boolean } | null>(null);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -42,11 +40,6 @@ export function FirebaseSignInForm({ next }: { next: string }) {
     setBusy(true);
     setError(null);
     const result = await signInWithPassword(email, password);
-    if (result.kind === "code_required") {
-      const q = new URLSearchParams({ next, ...(remember ? { remember: "1" } : {}) });
-      router.push(`/admin/login/code?${q.toString()}`);
-      return;
-    }
     if (result.kind === "error") {
       setBusy(false);
       setError(result.message);
@@ -55,7 +48,7 @@ export function FirebaseSignInForm({ next }: { next: string }) {
     const session = await exchangeForSession(result.idToken, { remember, next });
     if (!session.ok) {
       setBusy(false);
-      if (session.enrolMfa) setSetup({ email, password, remember });
+      if (session.emailCode) setCode({ idToken: result.idToken, step: session.emailCode, remember });
       else setError(session.message);
       return;
     }
@@ -63,7 +56,7 @@ export function FirebaseSignInForm({ next }: { next: string }) {
     window.location.assign(session.next);
   }
 
-  if (setup) return <CodeSetup {...setup} next={next} onCancel={() => setSetup(null)} />;
+  if (code) return <CodeForm {...code} next={next} onCancel={() => setCode(null)} />;
 
   return (
     <form onSubmit={onSubmit} noValidate className="grid grid-cols-1 gap-5">

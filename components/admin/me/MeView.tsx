@@ -206,7 +206,7 @@ export function MeView({ me, save, changePassword, signOutDevice, signOutOthers 
           )}
           {me.mfa.required ? (
             <p className="mt-4 flex items-center gap-2 text-[14px] font-semibold text-body">
-              <ShieldCheck aria-hidden className="size-4 text-forest" /> {me.mfa.enrolled ? "You use a sign-in code from your phone." : "You’ll set up a sign-in code next time you sign in."}
+              <ShieldCheck aria-hidden className="size-4 text-forest" /> You finish signing in with a code we email you.
             </p>
           ) : null}
         </Card>

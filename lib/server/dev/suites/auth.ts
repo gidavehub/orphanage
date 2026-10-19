@@ -20,7 +20,12 @@ import {
   removeLocalAccount,
   revokeLocalSession,
 } from "@/lib/server/auth/local";
+import { checkSignInCode, CODE_MAX_TRIES, emailHint, sendSignInCode } from "@/lib/server/auth/email-code";
 import { checkPasswordPolicy, hashPassword, verifyPassword } from "@/lib/server/auth/password";
+import { getStore } from "@/lib/server/db";
+import { docPath } from "@/lib/server/db/collections";
+import { deliverOutboxItem, outboxId, outboxPath } from "@/lib/server/email/outbox";
+import { readMailboxFile, removeMailboxFile } from "@/lib/server/email/transports/mailbox";
 import { getViewer, toShellViewer } from "@/lib/server/auth/session";
 import { resolveBackend } from "@/lib/server/env";
 import { caseRecorder } from "../selftest";
@@ -146,6 +151,73 @@ export const suite: Suite = {
         if (uid) await removeLocalAccount(uid).catch(() => undefined);
       }
     }
+
+    // The emailed sign-in code (lib/server/auth/email-code.ts; no authenticator app since 2026-10-19).
+    // Practice mode only: the email lands in .data/mailbox, where the code is read back.
+    if (resolveBackend() === "local") {
+      const run = randomBytes(4).toString("hex");
+      const uid = `selftest-code-${run}`;
+      const email = `code-${run}@haven.test`;
+      const outboxIds: string[] = [];
+      const codeFrom = async (challengeId: string): Promise<string> => {
+        const id = outboxId("staff_sign_in_code", `code~${challengeId}`);
+        outboxIds.push(id);
+        for (let i = 0; i < 10; i++) {
+          await deliverOutboxItem(id).catch(() => null);
+          const html = await readMailboxFile(id);
+          const m = html?.match(/Your code[\s\S]{0,600}?\b(\d{6})\b/);
+          if (m) return m[1];
+          await new Promise((r) => setTimeout(r, 300));
+        }
+        throw new Error("the code email never reached the practice mailbox");
+      };
+      try {
+        await t.check("the code email names the code, and the hint hides the address", async () => {
+          const a = await sendSignInCode(uid, email, "Selftest");
+          const code = await codeFrom(a.challengeId);
+          return /^\d{6}$/.test(code) && a.emailHint === emailHint(email) && a.emailHint.includes("•••") && !a.emailHint.includes(run);
+        });
+        await t.check("a wrong code is refused; the right one works once", async () => {
+          const a = await sendSignInCode(uid, email, "Selftest");
+          const code = await codeFrom(a.challengeId);
+          const wrong = code === "000000" ? "111111" : "000000";
+          const r1 = await checkSignInCode(uid, a.challengeId, wrong);
+          const r2 = await checkSignInCode(uid, a.challengeId, code);
+          const r3 = await checkSignInCode(uid, a.challengeId, code);
+          if (r1 !== "wrong" || r2 !== "ok" || r3 !== "expired") throw new Error(`wrong=${r1} right=${r2} again=${r3}`);
+          return true;
+        });
+        await t.check("a new code replaces the last; someone else's challenge never works", async () => {
+          const a = await sendSignInCode(uid, email, "Selftest");
+          const oldCode = await codeFrom(a.challengeId);
+          const b = await sendSignInCode(uid, email, "Selftest");
+          const newCode = await codeFrom(b.challengeId);
+          const old = await checkSignInCode(uid, a.challengeId, oldCode);
+          const other = await checkSignInCode(`${uid}-other`, b.challengeId, newCode);
+          const ok = await checkSignInCode(uid, b.challengeId, newCode);
+          if (old !== "expired" || other !== "expired" || ok !== "ok") throw new Error(`old=${old} other=${other} new=${ok}`);
+          return true;
+        });
+        await t.check(`${CODE_MAX_TRIES} wrong tries use the code up`, async () => {
+          const a = await sendSignInCode(uid, email, "Selftest");
+          const code = await codeFrom(a.challengeId);
+          const wrong = code === "000000" ? "111111" : "000000";
+          const results: string[] = [];
+          for (let i = 0; i < CODE_MAX_TRIES; i++) results.push(await checkSignInCode(uid, a.challengeId, wrong));
+          const after = await checkSignInCode(uid, a.challengeId, code);
+          if (results[CODE_MAX_TRIES - 1] !== "too_many" || after !== "too_many") throw new Error(`results=${results.join(",")} after=${after}`);
+          return true;
+        });
+      } finally {
+        const store = getStore();
+        await store.delete(docPath("staffSignInCodes", uid)).catch(() => undefined);
+        for (const id of outboxIds) {
+          await store.delete(outboxPath(id)).catch(() => undefined);
+          await removeMailboxFile(id).catch(() => undefined);
+        }
+      }
+    }
+
     return t.cases;
   },
 };

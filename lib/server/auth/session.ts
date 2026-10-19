@@ -31,6 +31,7 @@ import { env, resolveBackend } from "@/lib/server/env";
 import { log } from "@/lib/server/log";
 import { sha256Id } from "@/lib/server/security/hmac";
 import { clientIp } from "@/lib/server/security/spam";
+import { checkSignInCode, sendSignInCode } from "./email-code";
 import { createSessionCookie, mfaRequiredFor, revokeRefreshTokens, verifyIdToken, verifySessionCookie, FRESH_SIGN_IN_MS } from "./firebase";
 import {
   createLocalSession,
@@ -80,7 +81,7 @@ const currentSession = cache(async (): Promise<CurrentSession | null> => {
   return null;
 });
 
-function viewerFrom(staff: StaffProfile, s: CurrentSession): Viewer {
+function viewerFrom(staff: StaffProfile, s: CurrentSession, record?: StaffSession | null): Viewer {
   const roles = (Array.isArray(staff.roles) ? staff.roles : []).filter(isRole) as Role[];
   const viewerScopes = (Array.isArray(staff.viewerScopes) ? staff.viewerScopes : []) as ViewerScope[];
   return {
@@ -94,7 +95,8 @@ function viewerFrom(staff: StaffProfile, s: CurrentSession): Viewer {
     timezone: staff.timezone || "Africa/Banjul",
     textSize: staff.textSize === "large" ? "large" : "normal",
     authTime: s.authTime,
-    mfa: s.mfa,
+    // A second step: an emailed code (now), or a Firebase second factor (older sessions).
+    mfa: s.mfa || record?.secondFactor === "email",
     backend: s.mode === "firebase" ? "firestore" : "local",
   };
 }
@@ -110,7 +112,7 @@ export const getViewer: () => Promise<Viewer | null> = cache(async (): Promise<V
     if (!staff || staff.status !== "active") return null;
     if (staff.sessionsRevokedAt && s.issuedAt < staff.sessionsRevokedAt) return null;
     if (record && record.revokedAt) return null;
-    return viewerFrom(staff, s);
+    return viewerFrom(staff, s, record ?? null);
   } catch (err) {
     if (err instanceof BackendUnavailableError) return null;
     throw err;
@@ -214,7 +216,10 @@ async function setSessionCookie(value: string, opts: { lifetimeMs: number; remem
  * httpOnly cookie for the role's lifetime (D86), records the device label (D92), stamps
  * lastSignInAt and writes an `auth.sign_in` audit entry. Firebase mode needs the fresh ID token.
  */
-export async function startSession(uid: Uid, opts: { authTime: Millis; remember: boolean; idToken?: string; device?: string }): Promise<void> {
+export async function startSession(
+  uid: Uid,
+  opts: { authTime: Millis; remember: boolean; idToken?: string; device?: string; secondFactor?: "email" | null }
+): Promise<void> {
   const backend = resolveBackend();
   if (backend === "unavailable") throw new BackendUnavailableError("Signing in is not switched on yet.");
   const store = getStore();
@@ -242,6 +247,7 @@ export async function startSession(uid: Uid, opts: { authTime: Millis; remember:
       remember: opts.remember,
       provider: "firebase",
       revokedAt: null,
+      secondFactor: opts.secondFactor ?? null,
     };
     await store.set(docPath("staffSessions", sha256Id(value)), record);
   }
@@ -261,14 +267,15 @@ export async function startSession(uid: Uid, opts: { authTime: Millis; remember:
 
 export type FirebaseSessionResult =
   | { kind: "ok"; uid: Uid }
-  /** Roles that require a sign-in code, and this sign-in had none: no cookie; enrol first (D88). */
-  | { kind: "enrol_mfa" }
+  /** Roles that need a second step: a code was emailed; no cookie until it is typed (email-code.ts). */
+  | { kind: "code_sent"; challengeId: string; emailHint: string }
   | { kind: "invalid" | "stale" | "not_staff" };
 
 /**
  * Firebase mode (data-model §9.1): exchanges a fresh ID token for a session cookie. Rejects invalid
  * or revoked tokens, sign-ins older than 5 minutes, people without an active staff profile (blocks
- * uninvited Google accounts) and required-MFA roles without a second factor. Route Handler only.
+ * uninvited Google accounts). Roles that need a second step get a code by email instead of a cookie
+ * (finishFirebaseSessionWithCode). Route Handler only.
  */
 export async function startFirebaseSession(idToken: string, opts: { remember: boolean; ip?: string | null }): Promise<FirebaseSessionResult> {
   const token = await verifyIdToken(idToken);
@@ -287,8 +294,48 @@ export async function startFirebaseSession(idToken: string, opts: { remember: bo
     });
     return { kind: "not_staff" };
   }
-  if (mfaRequiredFor(staff.roles) && !token.mfa) return { kind: "enrol_mfa" };
+  if (mfaRequiredFor(staff.roles) && !token.mfa) {
+    const email = staff.email || token.email;
+    if (!email) return { kind: "invalid" };
+    const sent = await sendSignInCode(token.uid, email, firstNameOf(staff.displayName));
+    return { kind: "code_sent", ...sent };
+  }
   await startSession(token.uid, { authTime: token.authTime, remember: opts.remember, idToken });
+  return { kind: "ok", uid: token.uid };
+}
+
+export type CodeSessionResult = { kind: "ok"; uid: Uid } | { kind: "wrong" | "expired" | "too_many" | "invalid" | "stale" | "not_staff" };
+
+/**
+ * Finishes a sign-in with the emailed code: the same fresh ID token as before plus the code. A right
+ * code starts the session, marked as signed in with a second step. Route Handler only.
+ */
+export async function finishFirebaseSessionWithCode(
+  idToken: string,
+  challengeId: string,
+  code: string,
+  opts: { remember: boolean; ip?: string | null }
+): Promise<CodeSessionResult> {
+  const token = await verifyIdToken(idToken);
+  if (!token) return { kind: "invalid" };
+  if (Date.now() - token.authTime > FRESH_SIGN_IN_MS) return { kind: "stale" };
+  const staffPath = docPath("staff", token.uid);
+  const staff = await getStore().get<StaffProfile>(staffPath);
+  if (!staff || staff.status !== "active") return { kind: "not_staff" };
+  const check = await checkSignInCode(token.uid, challengeId, code);
+  if (check !== "ok") {
+    await audit({
+      actor: { kind: "staff", uid: token.uid, name: staff.displayName, roles: staff.roles },
+      action: "auth.sign_in_failed",
+      area: "auth",
+      summary: `${staff.displayName} typed a sign-in code that did not work`,
+      sensitive: true,
+      targetPath: staffPath,
+      ip: opts.ip ?? undefined,
+    });
+    return { kind: check };
+  }
+  await startSession(token.uid, { authTime: token.authTime, remember: opts.remember, idToken, secondFactor: "email" });
   return { kind: "ok", uid: token.uid };
 }
 
@@ -370,7 +417,7 @@ export async function refreshSessionAuth(input: { password?: string; idToken?: s
     const store = getStore();
     const old = docPath("staffSessions", s.sessionId);
     const previous = await store.get<StaffSession>(old);
-    await startSession(s.uid, { authTime: token.authTime, remember: previous?.remember ?? false, idToken: input.idToken });
+    await startSession(s.uid, { authTime: token.authTime, remember: previous?.remember ?? false, idToken: input.idToken, secondFactor: previous?.secondFactor ?? null });
     if (previous) await store.update(old, { revokedAt: now });
     return "ok";
   }

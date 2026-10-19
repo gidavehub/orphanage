@@ -73,6 +73,8 @@ export interface StaffSession {
   remember: boolean;
   provider: "firebase" | "local";
   revokedAt: Millis | null;
+  /** "email": this sign-in was finished with an emailed code (lib/server/auth/email-code.ts). */
+  secondFactor?: "email" | null;
 }
 
 /** notifications/{id}: in-app updates (TTL 90 days). Titles are never sensitive. */

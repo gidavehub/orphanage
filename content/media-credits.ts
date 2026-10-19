@@ -42,6 +42,27 @@ export const mediaCredits: MediaCredit[] = [
     "childPlaceholder": true
   },
   {
+    "id": "hero-family-chicago",
+    "type": "image",
+    "section": "hero",
+    "model": "gemini-3.1-flash-image",
+    "childPlaceholder": true
+  },
+  {
+    "id": "hero-family-atlanta",
+    "type": "image",
+    "section": "hero",
+    "model": "gemini-3.1-flash-image",
+    "childPlaceholder": true
+  },
+  {
+    "id": "hero-children-world",
+    "type": "image",
+    "section": "hero",
+    "model": "gemini-3.1-flash-image",
+    "childPlaceholder": true
+  },
+  {
     "id": "hero-family-ye",
     "type": "image",
     "section": "hero",

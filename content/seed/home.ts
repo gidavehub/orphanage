@@ -8,8 +8,9 @@ import "server-only";
 import type { DocSeed } from "@/lib/content/types";
 import { ref } from "@/lib/media/pipeline";
 
-// Families from the poorest regions (user brief 2026-10-02): Africa, South and Southeast Asia and the
-// Arab world, about a third Black; each a mother and a father with their children (founder).
+// Families of every nation, "but more Black" (founder, 2026-10-19 meeting): The Gambia, inner-city
+// America (Chicago, Atlanta), Africa, South and Southeast Asia and the Arab world, and children of
+// every background and age together; each family a mother and a father with their children.
 export const homeLayoutSeed = {
   hidden: [],
 } satisfies DocSeed<"home.layout">;
@@ -24,6 +25,13 @@ export const homeHeroSeed = {
       media: ref("hero-1"),
     },
     {
+      id: "close-to-home",
+      eyebrow: "Close to Home, Too",
+      title: ["Standing With Families", "in Chicago and Beyond"],
+      place: "us",
+      media: ref("hero-family-chicago"),
+    },
+    {
       id: "every-family",
       eyebrow: "Every Family, Every Nation",
       title: ["Standing With Families", "Wherever They Call Home"],
@@ -31,11 +39,11 @@ export const homeHeroSeed = {
       media: ref("hero-family-in"),
     },
     {
-      id: "restoring-hope",
-      eyebrow: "Restoring Hope",
-      title: ["Restoring Hope", "One Child at a Time"],
-      place: "ph",
-      media: ref("hero-family-ph"),
+      id: "every-age",
+      eyebrow: "Every Child, Every Age",
+      title: ["Every Age, Every Background,", "Every Child Belongs"],
+      place: "ca",
+      media: ref("hero-children-world"),
     },
     {
       id: "give-hope",
@@ -45,18 +53,25 @@ export const homeHeroSeed = {
       media: ref("hero-family-et"),
     },
     {
+      id: "every-neighbourhood",
+      eyebrow: "Every Neighbourhood",
+      title: ["From Atlanta to Banjul,", "Every Child Matters"],
+      place: "us",
+      media: ref("hero-family-atlanta"),
+    },
+    {
+      id: "restoring-hope",
+      eyebrow: "Restoring Hope",
+      title: ["Restoring Hope", "One Child at a Time"],
+      place: "ph",
+      media: ref("hero-family-ph"),
+    },
+    {
       id: "stronger-together",
       eyebrow: "Stronger Together",
       title: ["Strong Families,", "Brighter Futures"],
       place: "pk",
       media: ref("hero-family-pk"),
-    },
-    {
-      id: "protecting-childhood",
-      eyebrow: "Protecting Childhood",
-      title: ["Protecting Childhood", "Around the World"],
-      place: "kh",
-      media: ref("hero-family-kh"),
     },
     {
       id: "every-child",
@@ -74,7 +89,7 @@ export const homeHeroSeed = {
 export const homeWorldSeed = {
   eyebrow: "One Family, Every Nation",
   title: "Standing With Children and Families of Every Background",
-  intro: "From The Gambia across Africa, South and Southeast Asia, the Arab world and beyond, every child deserves a safe and hopeful future.",
+  intro: "From The Gambia across Africa, the Americas, South and Southeast Asia, the Arab world and beyond, every child deserves a safe and hopeful future.",
 } satisfies DocSeed<"home.world">;
 
 export const homePartnersSeed = {
@@ -104,7 +119,8 @@ export const homeAboutSeed = {
     { label: "Confidentiality", tone: "night" },
   ],
   visionLabel: "Our vision:",
-  vision: "A society in which every child grows up safe, supported and able to reach their full potential.",
+  // Founder, 2026-10-19 meeting: every child, whatever their religion, background or social status.
+  vision: "A society in which every child is fed, safe and supported, whatever their religion, background or social status, and able to reach their full potential.",
   image: ref("about"),
   cta: { label: "More About Us", to: "about" }, // public-pages §6: relabelled from "About More"
 } satisfies DocSeed<"home.about">;

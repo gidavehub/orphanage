@@ -45,6 +45,8 @@ export const aboutPage: PageSeed = {
           "m1",
           "To protect vulnerable children, enhance their economic prosperity, and strengthen families by connecting them with education, healthcare, psychosocial support, legal assistance and sustainable community-based opportunities.",
         ),
+        // Founder, 2026-10-19 meeting: every child, whatever their religion, background or social status.
+        para("m2", "We are here for every child: fed, protected and cared for, whatever their religion, background or social status."),
       ],
     },
     // CLIENT: value descriptions are [draft].

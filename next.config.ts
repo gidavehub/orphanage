@@ -21,7 +21,7 @@ const csp = [
   // Firebase Auth client (staff sign-in pages only)
   "connect-src 'self' https://*.googleapis.com",
   // Firebase Auth helper iframe, Turnstile, privacy-enhanced YouTube embeds in posts
-  "frame-src 'self' https://*.firebaseapp.com https://challenges.cloudflare.com https://www.youtube-nocookie.com",
+  "frame-src 'self' https://*.firebaseapp.com https://challenges.cloudflare.com https://www.youtube-nocookie.com https://www.google.com https://maps.google.com",
   "form-action 'self' https://checkout.stripe.com",
   "object-src 'none'",
   "base-uri 'self'",

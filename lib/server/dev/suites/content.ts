@@ -77,16 +77,19 @@ const expire = (tags: string[]) => tags.forEach((t) => revalidateTag(t, { expire
 
 /** Today's landing values (content/home.ts, content/people.ts, content/site.ts on 2026-10-10). */
 const TODAY = {
+  // Founder, 2026-10-19 meeting: Chicago and Atlanta families and every age together joined the slides.
   heroTitles: [
     ["Every Child Deserves", "a Safe and Hopeful Future"],
+    ["Standing With Families", "in Chicago and Beyond"],
     ["Standing With Families", "Wherever They Call Home"],
-    ["Restoring Hope", "One Child at a Time"],
+    ["Every Age, Every Background,", "Every Child Belongs"],
     ["Your Support Can Change", "a Child’s Story"],
+    ["From Atlanta to Banjul,", "Every Child Matters"],
+    ["Restoring Hope", "One Child at a Time"],
     ["Strong Families,", "Brighter Futures"],
-    ["Protecting Childhood", "Around the World"],
     ["One Promise of Care", "for Every Child"],
   ],
-  heroPlaces: ["gm", "in", "ph", "et", "pk", "kh", "ye"],
+  heroPlaces: ["gm", "us", "in", "ca", "et", "us", "ph", "pk", "ye"],
   appealCurrencies: ["USD", "GMD", "USD", "USD", "USD", "USD", "USD", "USD"],
   appealRaised: [2900, 38500, 3400, 2150, 3700, 850, 620, 1250],
   appealGoals: [5500, 90000, 8000, 5000, 5000, 8000, 3000, 6000],
@@ -172,8 +175,8 @@ export const suite: Suite = {
 
     /* ── The landing page, as today ── */
     const home = await getHomeContent();
-    await t.check("hero: seven slides with today's titles and places", () =>
-      home.hero.slides.length === 7 && same(home.hero.slides.map((s) => s.title), TODAY.heroTitles) && same(home.hero.slides.map((s) => s.place), TODAY.heroPlaces)
+    await t.check("hero: nine slides with today's titles and places", () =>
+      home.hero.slides.length === 9 && same(home.hero.slides.map((s) => s.title), TODAY.heroTitles) && same(home.hero.slides.map((s) => s.place), TODAY.heroPlaces)
         ? true
         : show(home.hero.slides.map((s) => [s.title, s.place])),
     );

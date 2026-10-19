@@ -5,8 +5,9 @@
 // hopeful, everyday moments. `child: true` assets are placeholders to replace with
 // consented real photography before launch.
 //
-// People mix (user brief 2026-10-02): about one third Black; the rest South Asian,
-// Southeast Asian and Arab, from the poorest countries; no white people anywhere.
+// People mix (founder, 2026-10-19 meeting, replacing the 2026-10-02 brief): many nationalities,
+// "but more Black": at least 40% Black-led; inner-city American families (Chicago, Atlanta);
+// some white children, shown within mixed groups so everybody sees Haven is for every child.
 // Families are a mother and a father with their children (founder). `eth` tags every
 // asset that shows people so `node scripts/media/audit-mix.mjs` can check the balance.
 
@@ -81,6 +82,15 @@ export const images = [
     prompt: "A Pakistani family in a village in Punjab, Pakistan: a mother in a colourful shalwar kameez with a dupatta over her hair and a father in a cream shalwar kameez, with their son and daughter, smiling together in their brick courtyard beside a woven charpai bed, wheat fields heavily blurred behind, warm golden light." + FAMILY_FRAMING },
   { id: "hero-family-kh", aspect: "16:9", size: "2K", kind: "world", child: true, eth: "se-asian", section: "hero",
     prompt: "A Cambodian family in a rural village in Cambodia: a mother and a father with their two young children and a grandmother, smiling together on the wooden steps of their stilt house, rice paddies and sugar palms heavily blurred behind, warm golden light." + FAMILY_FRAMING },
+  // Inner-city American families (founder, 2026-10-19): Chicago and Atlanta.
+  { id: "hero-family-chicago", aspect: "16:9", size: "2K", kind: "world", child: true, eth: "black", section: "hero",
+    prompt: "An African-American family in an inner-city neighbourhood of Chicago, Illinois, United States: a mother in a warm knit sweater and a father in a navy jacket, with their son of about nine and their daughter of about six, laughing and hugging together on the front steps of their red-brick two-flat apartment building, a tree-lined city street with parked cars and an elevated train line heavily blurred behind, crisp autumn golden light. Everyone in the family is Black. No signs, street names, lettering or logos anywhere." + FAMILY_FRAMING },
+  { id: "hero-family-atlanta", aspect: "16:9", size: "2K", kind: "world", child: true, eth: "black", section: "hero",
+    prompt: "An African-American family in a neighbourhood of Atlanta, Georgia, United States: a mother with natural curly hair in a bright yellow blouse and a father in a crisp white shirt, with their son of about fourteen and their daughter of about three on her father's hip, smiling together on the wooden front porch of their modest craftsman bungalow, tall green trees heavily blurred behind, warm late-afternoon light. Everyone in the family is Black. No signs, lettering or logos anywhere." + FAMILY_FRAMING },
+  // Every child, every age (founder, 2026-10-19): "a whole nationality of just children, different
+  // ages… from six months on up to 21", some white children among them, "but more Black".
+  { id: "hero-children-world", aspect: "16:9", size: "2K", kind: "world", child: true, eth: "mixed", section: "hero",
+    prompt: "A joyful group portrait of eleven children and young people of many different backgrounds and every age, gathered closely together on the grass of a sunny city park in Toronto, Canada: a Black West African young woman of about twenty-one holding a smiling Black baby of about six months, a Black toddler of about two, an African-American girl of about seven, a Black boy of about ten, a Black teenage boy of about seventeen, an Indian girl of about nine, an Arab boy of about twelve, a Latina girl of about thirteen, a white boy of about eight with freckles and a white girl of about five with blonde pigtails. Most of the group are Black, and every child looks clearly different from the others. They are laughing and leaning into one another with arms around shoulders, everyday modern clothes in bright colours, warm golden light, trees softly blurred behind. No text, logos or lettering anywhere. Medium wide shot: the group is large in frame and fills the centre of the wide composition, every face clearly visible." },
   { id: "hero-family-ye", aspect: "16:9", size: "2K", kind: "world", child: true, eth: "arab", section: "hero",
     prompt: "A Yemeni family in Yemen: a mother in a dark abaya with a colourful headscarf framing her smiling face and a father in a white thobe with a patterned shawl over his shoulder, with their son and daughter, smiling warmly together in the doorway of their old mudbrick home with carved wooden windows, warm golden light. No daggers, belts with blades or weapons of any kind." + FAMILY_FRAMING },
 
@@ -95,8 +105,8 @@ export const images = [
     prompt: "Two adult professionals, an Indian woman in a smart kurta and an Arab man in a crisp shirt, shaking hands warmly across a wooden table in a bright community office with documents and a laptop." },
 
   // Programme appeals (Donat cause cards); place codes live in content/home.ts → appeals.
-  { id: "appeal-education", aspect: "4:3", kind: "world", child: true, eth: "south-asian", section: "appeals",
-    prompt: "Eager Indian primary-school children in plain light-blue clothes at simple wooden desks in a sunlit village classroom in India, raising their hands, their smiling teacher in a sari slightly out of focus in the foreground. The chalkboard shows only simple chalk drawings of shapes and numbers, no words." + NO_CRESTS },
+  { id: "appeal-education", aspect: "4:3", kind: "photo", child: true, eth: "black", section: "appeals",
+    prompt: "Eager Gambian primary-school children in plain light-blue clothes at simple wooden desks in a sunlit classroom in The Gambia, raising their hands with big smiles, their smiling teacher in a colourful head wrap slightly out of focus in the foreground. The chalkboard shows only simple chalk drawings of shapes and numbers, no words. Everyone in the classroom is Black West African." + NO_CRESTS },
   { id: "appeal-medical", aspect: "4:3", kind: "world", child: true, eth: "se-asian", section: "appeals",
     prompt: "A friendly Cambodian nurse in a white coat gently checking a smiling seven-year-old Cambodian girl's heartbeat with a stethoscope at a clean village health centre in Cambodia while the girl's mother watches beside her." },
   { id: "appeal-counselling", aspect: "4:3", kind: "world", child: true, eth: "arab", section: "appeals",
@@ -115,8 +125,8 @@ export const images = [
   // Pinned focus slides (VU full-bleed): one region per theme. Protection is the Gambian clip (focus-1).
   { id: "focus-2", aspect: "16:9", size: "2K", kind: "world", child: true, eth: "south-asian", section: "focus",
     prompt: "A smiling Indian girl of about nine in a simple cotton dress walking along a red dirt road in rural India toward school, a cloth book bag over her shoulder and exercise books held against her chest, a small simple school building in the far distance ahead among green fields under a wide sky, morning golden light with dust softly glowing, hopeful and determined. Wide composition with the girl on the right third." + NO_CRESTS },
-  { id: "focus-4", aspect: "16:9", size: "2K", kind: "world", child: true, eth: "arab", section: "focus",
-    prompt: "A friendly Egyptian police officer in a neat white uniform standing at the front of a sunlit primary classroom in a village in Egypt, smiling and talking with attentive, happy Egyptian children seated at wooden desks, several raising their hands to ask questions, a teacher in a headscarf watching from the side. Reassuring and approachable, no weapons visible. Wide composition." + NO_CRESTS },
+  { id: "focus-4", aspect: "16:9", size: "2K", kind: "photo", child: true, eth: "black", section: "focus",
+    prompt: "Two friendly Gambian police officers, a Black West African woman and a Black West African man in neat light-blue police shirts and dark trousers with no visible lettering or insignia, standing at the front of a sunlit primary classroom in The Gambia, smiling and talking with attentive, happy Gambian children seated at wooden desks, several raising their hands to ask questions, their teacher in a colourful head wrap watching from the side. Reassuring and approachable, no weapons visible. Everyone in the classroom is Black West African. Wide composition." + NO_CRESTS },
 
   // CTA floating hands (keyed to alpha)
   { id: "hand-left", aspect: "16:9", kind: "chroma", section: "doors",
@@ -220,10 +230,10 @@ export const videos = [
 
   { id: "focus-1", aspect: "16:9", child: true, eth: "black", section: "focus",
     scene: "In a leafy community courtyard, a kind female child-protection officer crouches to eye level and talks gently with a smiling girl of about eight wearing a plain everyday dress with no badges, emblems or lettering; the girl nods and laughs; slow push-in." },
-  { id: "focus-3", aspect: "16:9", style: "world", child: true, eth: "se-asian", section: "focus",
-    scene: "Beside a plain white mobile-clinic van with no writing on it, parked at the edge of a village schoolyard in the Philippines, a smiling Filipino nurse kneels to gently listen to a young Filipino boy's heartbeat with a stethoscope while a Filipino doctor in a white coat talks cheerfully with a small group of Filipino children waiting their turn; coconut palms behind; slow lateral drift." },
+  { id: "focus-3", aspect: "16:9", child: true, eth: "black", section: "focus",
+    scene: "Beside a plain white mobile-clinic van with no writing on it, parked at the edge of a village schoolyard in The Gambia, a smiling Black Gambian nurse in light-blue scrubs kneels to gently listen to a young Gambian boy's heartbeat with a stethoscope while a second Black Gambian nurse in a white coat talks cheerfully with a small group of Gambian children waiting their turn; mango trees behind; slow lateral drift. Everyone in the scene is Black West African. No signs, lettering or logos anywhere." },
   { id: "donate", aspect: "16:9", style: "world", child: true, eth: "mixed", section: "donate",
-    scene: "Four children of clearly different backgrounds, each about nine years old: a West African boy, an Indian girl, a Filipino girl and an Arab boy, walking side by side through tall golden grass in a wide field at sunset, carrying school bags and laughing together, the wind gently moving the grass stems in the foreground. Slow push-in." },
+    scene: "Children of many different backgrounds come walking from three different dirt roads that meet at a sunny crossroads, wave and smile as they meet, then walk on together side by side as one group toward the open doors of a welcoming community centre with a warm painted wall: a Black West African boy and girl, an African-American girl, a Black teenage boy, an Indian girl, an Arab boy and a white boy with freckles, aged from about six to sixteen, all carrying school bags. Most of the children are Black. Warm golden afternoon light. No signs, lettering or logos anywhere. Slow wide tracking shot following the group." },
   { id: "join", aspect: "16:9", style: "world", trimStart: 1, eth: "se-asian", section: "join",
     scene: "A close-up portrait of a young Filipino woman in her twenties, her face centred in the frame, looking calmly and steadily into the camera with a slow blink and a faint smile; people softly blurred behind her in a sunlit village. Almost still camera with a very slow push-in." },
   { id: "film", aspect: "16:9", eth: "black", section: "restoring",

@@ -388,8 +388,12 @@ a:hover .haven-mark__heart,
   }
 }
 
-/* World presence map (components/sections/WorldFlags.tsx): markers grow on hover,
-   the head-office marker breathes. */
+/* World presence map (components/sections/WorldFlags.tsx): the hand markers grow on hover,
+   the head-office marker breathes. The scale wrapper scales each hand about its own point. */
+.world-marker g[class*="scale-"] {
+  transform-box: fill-box;
+  transform-origin: center;
+}
 .world-marker__dot {
   transform-box: fill-box;
   transform-origin: center;

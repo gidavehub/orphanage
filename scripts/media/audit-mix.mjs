@@ -2,9 +2,9 @@
 //
 //   node scripts/media/audit-mix.mjs
 //
-// Brief (2026-10-02): about one third Black, the rest South Asian, Southeast Asian and
-// Arab; no white people. Exits 1 if the Black share leaves 30–36% or an untagged or
-// "white" asset shows up.
+// Brief (founder, 2026-10-19 meeting): many nationalities, "but more Black": at least 40%
+// Black-led; white children appear within mixed groups, never as a whole asset of their own.
+// Exits 1 if the Black share is under 40% or over 60%, or an untagged or "white" asset shows up.
 
 import { images, videos } from "./manifest.mjs";
 
@@ -23,7 +23,7 @@ for (const [k, n] of Object.entries(counts).sort((a, b) => b[1] - a[1])) console
 
 const black = (counts.black ?? 0) / total;
 const fails = [];
-if (black < 0.3 || black > 0.36) fails.push(`Black share ${pct(counts.black ?? 0)} is outside 30–36%`);
+if (black < 0.4 || black > 0.6) fails.push(`Black share ${pct(counts.black ?? 0)} is outside 40–60%`);
 if (counts.white) fails.push(`${counts.white} asset(s) tagged white`);
 if (untagged.length) fails.push(`untagged: ${untagged.join(", ")}`);
 console.log(fails.length ? `\n  ✗ ${fails.join("\n  ✗ ")}` : "\n  ✓ mix within brief");

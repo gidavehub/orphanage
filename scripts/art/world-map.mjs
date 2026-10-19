@@ -11,7 +11,7 @@
 import { mkdir, readFile, writeFile } from "fs/promises";
 import { feature } from "topojson-client";
 import { geoContains, geoEqualEarth } from "d3-geo";
-import { countries } from "../../content/world.ts";
+import { countries, places } from "../../content/world.ts";
 
 const W = 1000;
 const H = 470;
@@ -34,10 +34,11 @@ for (let y = STEP / 2; y < H; y += STEP) {
   }
 }
 
+// Countries by ISO code, and the city and state pins (content/world.ts `places`) by their id.
 const points = Object.fromEntries(
-  countries.map(({ code, lat, lon }) => {
+  [...countries.map(({ code, lat, lon }) => [code, lat, lon]), ...places.map(({ id, lat, lon }) => [id, lat, lon])].map(([key, lat, lon]) => {
     const [x, y] = projection([lon, lat]);
-    return [code, [Math.round(x * 10) / 10, Math.round(y * 10) / 10]];
+    return [key, [Math.round(x * 10) / 10, Math.round(y * 10) / 10]];
   }),
 );
 
@@ -53,7 +54,7 @@ export const worldMap = {
   height: ${H},
   /** Dotted land layer (static file, same viewBox). */
   dots: "/art/world-dots.svg",
-  /** Projected marker position per ISO code in content/world.ts. */
+  /** Projected marker position per ISO code (and place id) in content/world.ts. */
   points: ${JSON.stringify(points)} as Record<string, [number, number]>,
 } as const;
 `;

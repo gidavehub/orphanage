@@ -463,7 +463,7 @@ export const HomeHeroSchema = z.object({
       }),
     )
     .min(1, { error: "Please keep at least one slide." })
-    .max(7, { error: "There is room for seven slides." }),
+    .max(9, { error: "There is room for nine slides." }),
   text: longText(260),
   primaryCta: CtaSchema,
   secondaryCta: CtaSchema,

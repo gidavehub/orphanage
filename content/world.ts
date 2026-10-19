@@ -6,7 +6,18 @@
 // CLIENT: confirm the list.
 
 export type Region = "Africa" | "Asia" | "Arab world" | "Americas" | "Pacific";
-export type Country = { code: string; name: string; region: Region; lat: number; lon: number };
+export type Country = {
+  code: string;
+  name: string;
+  region: Region;
+  lat: number;
+  lon: number;
+  /** Shown on the map by its `places` pins instead of one country marker (the United States). */
+  pinsOnly?: boolean;
+};
+
+/** A city or state pinned on the map (not a country: no flag of its own). */
+export type Place = { id: string; name: string; country: string; lat: number; lon: number };
 
 const A: Region = "Africa";
 
@@ -89,6 +100,9 @@ export const world: Country[] = [
   { code: "sy", name: "Syria", region: "Arab world", lat: 33.51, lon: 36.29 },
   { code: "iq", name: "Iraq", region: "Arab world", lat: 33.31, lon: 44.36 },
   { code: "ps", name: "Palestine", region: "Arab world", lat: 31.9, lon: 35.2 },
+  // North America (founder, 2026-10-19 meeting): inner-city families in the US, and Canada.
+  { code: "us", name: "United States", region: "Americas", lat: 38.9, lon: -77.04, pinsOnly: true },
+  { code: "ca", name: "Canada", region: "Americas", lat: 43.65, lon: -79.38 },
   { code: "ht", name: "Haiti", region: "Americas", lat: 18.59, lon: -72.31 },
   { code: "gt", name: "Guatemala", region: "Americas", lat: 14.63, lon: -90.51 },
   { code: "hn", name: "Honduras", region: "Americas", lat: 14.07, lon: -87.19 },
@@ -98,8 +112,18 @@ export const world: Country[] = [
   { code: "fj", name: "Fiji", region: "Pacific", lat: -18.14, lon: 178.44 },
 ];
 
-// Not a presence country: the US appears only for the Thanksgiving appeal (California office).
-const extra: Country[] = [{ code: "us", name: "United States", region: "Americas", lat: 38.9, lon: -77.04 }];
+// The United States on the map, by city and state (founder, 2026-10-19 meeting).
+export const places: Place[] = [
+  { id: "us-chicago", name: "Chicago, Illinois", country: "us", lat: 41.88, lon: -87.63 },
+  { id: "us-atlanta", name: "Atlanta, Georgia", country: "us", lat: 33.75, lon: -84.39 },
+  { id: "us-mississippi", name: "Mississippi", country: "us", lat: 32.3, lon: -90.18 },
+  { id: "us-california", name: "California", country: "us", lat: 34.05, lon: -118.24 },
+  { id: "us-florida", name: "Florida", country: "us", lat: 25.76, lon: -80.19 },
+  { id: "us-washington", name: "Washington State", country: "us", lat: 47.61, lon: -122.33 },
+  { id: "us-south-carolina", name: "South Carolina", country: "us", lat: 34.0, lon: -81.03 },
+];
+
+const extra: Country[] = [];
 
 export const countries: Country[] = [...africa, ...world];
 

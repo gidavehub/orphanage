@@ -45,6 +45,8 @@ export const EMAIL_TEMPLATE_IDS = [
   "staff_password_reset",
   "staff_sign_in_code",
   "staff_access_changed",
+  "stripe_keys_request",
+  "stripe_keys_changed",
   "staff_alert",
   "staff_alert_digest",
   "post_review_ready",

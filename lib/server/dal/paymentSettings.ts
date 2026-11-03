@@ -17,7 +17,7 @@ import { actorOf, auditTx } from "@/lib/server/audit";
 import { requireStaff } from "@/lib/server/auth/session";
 import { getStore } from "@/lib/server/db";
 import { settingsPath } from "@/lib/server/db/collections";
-import { env, features } from "@/lib/server/env";
+import { stripeKeys } from "@/lib/server/payments/keys";
 import { getPaymentSettings } from "@/lib/server/public/settings";
 
 export type GivingSettingsDTO = {
@@ -32,18 +32,19 @@ export type GivingSettingsDTO = {
 
 export async function getGivingSettings(): Promise<GivingSettingsDTO> {
   await requireStaff("settings.giving", "settings.manage");
-  const [raw, payment, donate, rec] = await Promise.all([
+  const [raw, payment, donate, rec, card] = await Promise.all([
     getStore().get<{ updatedAt?: number }>(settingsPath("payment")),
     getPaymentSettings(),
     loadDoc("donate.config", { preview: true }),
     contentStore().getDoc("donate.config"),
+    stripeKeys(),
   ]);
   return {
     payment,
     baseUpdatedAt: typeof raw?.updatedAt === "number" ? raw.updatedAt : 0,
     donate: { value: donate, version: rec?.version ?? 0 },
-    cardReady: Object.fromEntries(CURRENCIES.map((c) => [c, features.stripe && env.stripe.currencies.includes(c)])) as Record<Currency, boolean>,
-    stripeConnected: features.stripe,
+    cardReady: Object.fromEntries(CURRENCIES.map((c) => [c, card.mode !== "off" && card.currencies.includes(c)])) as Record<Currency, boolean>,
+    stripeConnected: card.mode !== "off",
   };
 }
 

@@ -9,7 +9,7 @@ import "server-only";
 
 import type Stripe from "stripe";
 import type { Donation, DonationIntent, RecurringGift } from "@/lib/model/domain/giving";
-import { DEFAULT_PAYMENT_SETTINGS } from "@/lib/model/domain/settings";
+import { CARD_CURRENCIES, DEFAULT_PAYMENT_SETTINGS } from "@/lib/model/domain/settings";
 import type { OutboxEmail } from "@/lib/model/domain/system";
 import { getStore } from "@/lib/server/db";
 import type { WithId } from "@/lib/server/db/store";
@@ -207,8 +207,8 @@ export const suite: Suite = {
       });
 
       await t.check("GMD never goes to Stripe, even when chosen", async () => {
-        const routes = effectiveRoutes({ ...DEFAULT_PAYMENT_SETTINGS, routes: { GMD: "stripe", USD: "stripe", GBP: "stripe", EUR: "stripe" } });
-        return routes.GMD === "local" ? true : `GMD=${routes.GMD}`;
+        const routes = effectiveRoutes({ ...DEFAULT_PAYMENT_SETTINGS, routes: { GMD: "stripe", USD: "stripe", GBP: "stripe", EUR: "stripe" } }, { mode: "test", currencies: [...CARD_CURRENCIES] });
+        return routes.GMD === "local" && routes.USD === "stripe" ? true : `GMD=${routes.GMD} USD=${routes.USD}`;
       });
 
       await t.check("unknown event types are acknowledged and ignored", async () => {

@@ -29,7 +29,7 @@ function money(minor: number | null | undefined, currency: string | null | undef
 
 /** Charge and balance details for a PaymentIntent, or null without Stripe or on any error. */
 export async function enrichPaymentIntent(paymentIntentId: string | null | undefined): Promise<Enrichment | null> {
-  const stripe = getStripe();
+  const stripe = await getStripe();
   if (!stripe || !paymentIntentId) return null;
   try {
     const pi = await stripe.paymentIntents.retrieve(paymentIntentId, { expand: ["latest_charge.balance_transaction"] });
@@ -50,7 +50,7 @@ export async function enrichPaymentIntent(paymentIntentId: string | null | undef
 
 /** The PaymentIntent behind a paid invoice (subscription renewals), or null. */
 export async function paymentIntentForInvoice(invoiceId: string | null | undefined): Promise<string | null> {
-  const stripe = getStripe();
+  const stripe = await getStripe();
   if (!stripe || !invoiceId) return null;
   try {
     const list = await stripe.invoicePayments.list({ invoice: invoiceId, status: "paid", limit: 1 });
@@ -68,7 +68,7 @@ export async function paymentIntentForInvoice(invoiceId: string | null | undefin
  * time). Run by the tick. Returns how many were completed.
  */
 export async function enrichPending(limit = 25): Promise<number> {
-  if (!getStripe()) return 0;
+  if (!(await getStripe())) return 0;
   const store = getStore();
   const page = await store.list<Donation>(C.donations, { where: [{ field: "status", op: "==", value: "allocated" }], orderBy: { field: "createdAt", dir: "desc" }, limit: 100 });
   const recent = await store.list<Donation>(C.donations, { where: [{ field: "status", op: "==", value: "acknowledged" }], orderBy: { field: "createdAt", dir: "desc" }, limit: 100 });

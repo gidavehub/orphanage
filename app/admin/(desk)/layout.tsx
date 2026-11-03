@@ -30,7 +30,7 @@ async function ShellWithViewer({ children }: { children: React.ReactNode }) {
       places={placesFor(viewer)}
       quickActions={quickActionsFor(viewer)}
       practice={practiceRibbon()}
-      paymentsInTestMode={integrationStatuses().some((s) => s.id === "stripe" && s.state === "test")}
+      paymentsInTestMode={(await integrationStatuses()).some((s) => s.id === "stripe" && s.state === "test")}
       updates={updates}
       signOutAction={signOut}
     >

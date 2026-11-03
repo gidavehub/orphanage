@@ -18,6 +18,7 @@ import { formatMoney, fromMinor } from "@/lib/money";
 import { routes } from "@/lib/routes";
 import { getCause, getPaymentSettings } from "@/lib/content/public";
 import { maskEmail } from "@/lib/server/dal/_shared";
+import { getCardSetup } from "@/lib/server/payments/keys";
 import { effectiveRoutes } from "@/lib/server/payments/routing";
 import { verifyToken } from "@/lib/server/security/hmac";
 import { readIntentBySession } from "./intents";
@@ -120,8 +121,8 @@ function nice(n: number): number {
 
 async function cardAlternativeFor(d: Donation): Promise<{ href: string; label: string } | null> {
   if (!d.cash || d.cash.baseAmount.currency !== "GMD") return null;
-  const s = await getPaymentSettings();
-  if (effectiveRoutes(s).USD !== "stripe") return null;
+  const [s, card] = await Promise.all([getPaymentSettings(), getCardSetup()]);
+  if (effectiveRoutes(s, card).USD !== "stripe") return null;
   const gmdPerUsd = s.fx.GMD;
   if (!(gmdPerUsd > 0)) return null;
   const usd = nice(fromMinor(d.cash.baseAmount.amountMinor, "GMD") / gmdPerUsd);

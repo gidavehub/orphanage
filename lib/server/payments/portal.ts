@@ -10,10 +10,10 @@ import { FREQUENCY_LABEL } from "@/lib/model/labels";
 import { formatMoney } from "@/lib/money";
 import { getStore } from "@/lib/server/db";
 import { C } from "@/lib/server/db/collections";
-import { env } from "@/lib/server/env";
 import { log } from "@/lib/server/log";
 import { signTokenFor } from "@/lib/server/security/hmac";
 import { absolute } from "@/lib/server/url";
+import { stripeKeys } from "./keys";
 import { getStripe } from "./stripe";
 
 export const MANAGE_LINK_TTL = 60 * 60_000;
@@ -43,7 +43,7 @@ export function portalLink(donorId: string, ttlMs: number = MANAGE_LINK_TTL): st
  * `base`/donate/manage. Null when Stripe is off or the donor has no card gift.
  */
 export async function portalSessionFor(donorId: string, idx: number | null, base: string): Promise<string | null> {
-  const stripe = getStripe();
+  const [stripe, keys] = await Promise.all([getStripe(), stripeKeys()]);
   if (!stripe) return null;
   const gifts = await stripeGiftsOf(donorId);
   const pick = idx === null ? (gifts.length === 1 ? gifts[0] : null) : (gifts[idx] ?? null);
@@ -52,7 +52,7 @@ export async function portalSessionFor(donorId: string, idx: number | null, base
     const session = await stripe.billingPortal.sessions.create({
       customer: pick.customerId,
       return_url: `${base}/donate/manage?done=1`,
-      ...(env.stripe.portalConfigId ? { configuration: env.stripe.portalConfigId } : {}),
+      ...(keys.portalConfigId ? { configuration: keys.portalConfigId } : {}),
     });
     return session.url;
   } catch (err) {

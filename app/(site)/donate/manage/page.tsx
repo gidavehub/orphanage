@@ -8,7 +8,7 @@ import { Notice } from "@/components/ui/Notice";
 import { Section } from "@/components/ui/Section";
 import { getContact } from "@/lib/content/public";
 import { routes } from "@/lib/routes";
-import { features } from "@/lib/server/env";
+import { getCardSetup } from "@/lib/server/payments/keys";
 import { baseUrl } from "@/lib/server/url";
 import { requestManageLink } from "./actions";
 
@@ -38,7 +38,7 @@ export default function ManagePage({ searchParams }: { searchParams: SearchParam
 }
 
 async function Body({ searchParams }: { searchParams: SearchParams }) {
-  const [sp, contact] = await Promise.all([searchParams, getContact()]);
+  const [sp, contact, card] = await Promise.all([searchParams, getContact(), getCardSetup()]);
   const done = sp.done === "1";
   const donations = contact.teamEmails.donations;
   return (
@@ -50,7 +50,7 @@ async function Body({ searchParams }: { searchParams: SearchParams }) {
               Your changes are saved with our card processor. Thank you for giving to Haven.
             </Notice>
           ) : null}
-          {features.stripe ? (
+          {card.mode !== "off" ? (
             <ManageLinkForm action={requestManageLink} />
           ) : (
             <Notice tone="info" title="Card payments are being set up" compact>

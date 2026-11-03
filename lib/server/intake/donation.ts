@@ -26,6 +26,7 @@ import { cashAmounts, recordPledge, type PledgeCause } from "@/lib/server/giving
 import { consentStamp, runIntake } from "@/lib/server/intake/pipeline";
 import { log } from "@/lib/server/log";
 import { startCheckout } from "@/lib/server/payments/checkout";
+import { stripeKeys } from "@/lib/server/payments/keys";
 import { routeForGift } from "@/lib/server/payments/routing";
 import {
   DonationRequestSchema,
@@ -91,12 +92,12 @@ async function handleCash(req: CashDonationRequest, request: Request, pledgeInst
     return fieldFail("frequency", `This cause takes ${allowed} gifts.`);
   }
 
-  const payment = await getPaymentSettings();
+  const [payment, card] = await Promise.all([getPaymentSettings(), stripeKeys()]);
   const methods = payment.instructions[req.currency]?.methods ?? [];
   const localMethod: LocalPaymentMethod | null = req.method && methods.includes(req.method) ? req.method : (methods[0] ?? null);
   const sponsorRef = await sponsorRefFor(cause, req.ref);
   const base = baseUrl(request);
-  const route = routeForGift(payment, req.currency, req.amount);
+  const route = routeForGift(payment, card, req.currency, req.amount);
 
   // "Pledge now and pay later" after a failed card start skips the card route for this submission.
   if (route === "stripe" && !pledgeInstead) {

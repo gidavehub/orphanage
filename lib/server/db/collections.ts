@@ -55,6 +55,7 @@ export const C = {
   staffSessions: "staffSessions",
   staffSignInCodes: "staffSignInCodes",
   invitations: "invitations",
+  stripeKeyLinks: "stripeKeyLinks",
   notifications: "notifications",
   // System
   auditLog: "auditLog",
@@ -104,6 +105,6 @@ export function subDocPath(c: CollectionKey, id: string, sub: SubKey, subId: str
 }
 
 /** "settings/payment". */
-export function settingsPath(id: "payment" | "org" | "notifications" | "forms" | "retention" | "emailCopy" | "seed"): string {
+export function settingsPath(id: "payment" | "org" | "notifications" | "forms" | "retention" | "emailCopy" | "seed" | "stripe"): string {
   return `${C.settings}/${id}`;
 }

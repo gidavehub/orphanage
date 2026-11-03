@@ -44,7 +44,7 @@ function isIdempotencyError(e: unknown): boolean {
  * off. Throws when Stripe refuses or can't be reached (the caller offers "pledge now, pay later").
  */
 export async function startCheckout(req: DonationRequest & { mode: "cash" }, ctx: CheckoutContext): Promise<{ url: string } | null> {
-  const stripe = getStripe();
+  const stripe = await getStripe();
   if (!stripe) return null;
   const recurring = req.frequency !== "one_time";
   const meta: HavenMeta = {

@@ -12,7 +12,7 @@ import { has } from "@/lib/server/auth/permissions";
 import { requireStaff } from "@/lib/server/auth/session";
 import { AREA_PERMS } from "@/lib/admin/access";
 import { listGifts } from "@/lib/server/dal/donations";
-import { features } from "@/lib/server/env";
+import { stripeKeys } from "@/lib/server/payments/keys";
 import { payLaterPledges } from "@/lib/server/payments/pay";
 import { sendPayLinksAction } from "./actions";
 import { firstGivingTab, givingTabs } from "./tabs";
@@ -42,7 +42,8 @@ async function Ledger({ searchParams }: { searchParams: Promise<Record<string, s
   }
   const sp = await searchParams;
   const month = typeof sp.month === "string" ? sp.month : null;
-  const [ledger, payLater] = await Promise.all([listGifts({ month }), features.stripe && can("donation.manage") ? payLaterPledges().catch(() => []) : Promise.resolve([])]);
+  const cardsOn = (await stripeKeys()).mode !== "off";
+  const [ledger, payLater] = await Promise.all([listGifts({ month }), cardsOn && can("donation.manage") ? payLaterPledges().catch(() => []) : Promise.resolve([])]);
   return (
     <>
       <PageHeader title="Giving" description="Every gift, thanked and put towards the right place." tabs={givingTabs("gifts", can)} actions={

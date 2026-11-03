@@ -6,7 +6,7 @@
 //   <collection>:<id|slug|code>     one item
 //   media                           the media index
 //   donations:totals                causeTotals (public "raised" figures)
-//   settings:<payment|org|forms>    public system settings
+//   settings:<payment|org|forms|stripe>    public system settings (stripe: mode and currencies only)
 // Writers: Server Actions → updateTag(tag); route handlers and cron → revalidateTag(tag, 'max');
 // cron-published posts → revalidateTag(tag, { expire: 0 }).
 
@@ -16,7 +16,7 @@ import type { CollectionName, DocId } from "@/lib/content/ids";
 export type SystemTaggedCollection = "resources" | "sponsorProfiles";
 export type TaggedCollection = CollectionName | SystemTaggedCollection;
 
-export type PublicSettingsKey = "payment" | "org" | "forms";
+export type PublicSettingsKey = "payment" | "org" | "forms" | "stripe";
 
 export const TAG = {
   doc: (id: DocId) => `content:${id}`,

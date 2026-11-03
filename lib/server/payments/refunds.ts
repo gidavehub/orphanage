@@ -16,7 +16,7 @@ export const REFUNDS_UNAVAILABLE = "Card refunds aren't switched on yet. Please 
 
 /** Refunds a card gift in full (amountMinor null) or in part. */
 export async function refundDonation(ref: string, amountMinor: number | null, v: Viewer): Promise<ActionResult<{ requested: number }>> {
-  const stripe = getStripe();
+  const stripe = await getStripe();
   if (!stripe) return actionError({ kind: "unavailable", message: REFUNDS_UNAVAILABLE });
   const d = await readDonation(ref);
   const pi = d?.cash?.stripe?.paymentIntentId;

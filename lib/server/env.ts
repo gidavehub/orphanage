@@ -102,8 +102,10 @@ export const env = {
     adminPassword: val(process.env.LOCAL_ADMIN_PASSWORD),
     seedPassword: val(process.env.LOCAL_SEED_PASSWORD),
   },
+  /** The fallback when no keys are saved in Settings › Connections (lib/server/payments/keys.ts). */
   stripe: {
     secretKey: val(process.env.STRIPE_SECRET_KEY),
+    publishableKey: val(process.env.STRIPE_PUBLISHABLE_KEY),
     webhookSecret: val(process.env.STRIPE_WEBHOOK_SECRET),
     /** What the Stripe account can technically charge (default USD, GBP, EUR). */
     currencies: currencies(val(process.env.STRIPE_CURRENCIES)),
@@ -224,9 +226,6 @@ export type Features = {
   readonly practiceMode: boolean;
   /** backend !== "unavailable". */
   readonly canWrite: boolean;
-  readonly stripe: boolean;
-  readonly stripeLive: boolean;
-  readonly stripeWebhook: boolean;
   readonly anthropic: boolean;
   readonly gemini: boolean;
   readonly ai: boolean;
@@ -247,9 +246,6 @@ export const features: Features = {
   get canWrite() {
     return resolveBackend() !== "unavailable";
   },
-  stripe: Boolean(env.stripe.secretKey),
-  stripeLive: /^(sk|rk)_live_/.test(env.stripe.secretKey ?? ""),
-  stripeWebhook: Boolean(env.stripe.webhookSecret),
   anthropic,
   gemini,
   ai: env.ai.provider !== "none" && (anthropic || gemini),

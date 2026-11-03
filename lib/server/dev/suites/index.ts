@@ -16,6 +16,7 @@ import { suite as retention } from "./retention";
 import { suite as seal } from "./seal";
 import { suite as store } from "./store";
 import { suite as stripe } from "./stripe";
+import { suite as stripekeys } from "./stripekeys";
 import { suite as workflow } from "./workflow";
 import { suite as zoom } from "./zoom";
 
@@ -29,6 +30,7 @@ export const SUITES = {
   content,
   rbac,
   stripe,
+  stripekeys,
   email,
   ai,
   zoom,

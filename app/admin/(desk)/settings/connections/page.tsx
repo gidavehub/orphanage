@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Bot, CreditCard, Database, Mail, Video } from "lucide-react";
 import { TestEmailButton } from "@/components/admin/settings/TestEmailButton";
 import { ListSkeleton } from "@/components/admin/shell/ListSkeleton";
+import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/admin/shell/PageHeader";
 import type { IntegrationStatus } from "@/lib/model/dto";
 import { requireStaff } from "@/lib/server/auth/session";
@@ -12,6 +13,7 @@ import { sendTestEmailAction } from "../actions";
 
 // Settings › Connections (admin-ux §6.16; integrations §2.2), super admins: what each outside
 // service does for Haven, whether it's on, and the setting names to give the developer. Never values.
+// Card payments open their own page, where the Stripe keys are pasted (./stripe).
 
 export const metadata: Metadata = { title: "Connections" };
 
@@ -37,7 +39,7 @@ export default function ConnectionsPage() {
 
 async function Cards() {
   await requireStaff("settings.manage");
-  const list = integrationStatuses();
+  const list = await integrationStatuses();
   return (
     <ul className="grid gap-3">
       {list.map((s) => {
@@ -69,6 +71,13 @@ async function Cards() {
                 {s.id === "email" ? (
                   <div className="mt-4">
                     <TestEmailButton send={sendTestEmailAction} />
+                  </div>
+                ) : null}
+                {s.id === "stripe" ? (
+                  <div className="mt-4">
+                    <Button href="/admin/settings/connections/stripe" variant="outline" size="sm" icon="arrow-right">
+                      {s.state === "off" ? "Add the Stripe keys" : "See or change the keys"}
+                    </Button>
                   </div>
                 ) : null}
               </div>

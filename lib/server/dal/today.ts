@@ -230,7 +230,7 @@ export async function getToday(): Promise<TodayDTO> {
     safe("website", () => website(v), null),
   ]);
   const connections = v.roles.includes("super_admin")
-    ? integrationStatuses()
+    ? (await integrationStatuses())
         .filter((s) => s.state === "off" || s.state === "problem")
         .map((s) => ({ id: s.id, headline: s.headline, meaning: s.meaning }))
     : [];

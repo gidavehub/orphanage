@@ -9,7 +9,7 @@ import { z } from "zod";
 import type { FormState } from "@/lib/forms/types";
 import { emailSchema } from "@/lib/schemas/common";
 import { enqueueEmail } from "@/lib/server/email/outbox";
-import { features } from "@/lib/server/env";
+import { stripeKeys } from "@/lib/server/payments/keys";
 import { donorIdOf } from "@/lib/server/giving/donors";
 import { log } from "@/lib/server/log";
 import { portalLink, stripeGiftsOf } from "@/lib/server/payments/portal";
@@ -32,7 +32,7 @@ export async function submitManageLinkForm(fd: FormData): Promise<FormState> {
     create: async (d, ctx) => {
       const email = d.email.trim();
       const perAddress = await rateLimit("manage_link_address", emailHash(email), ctx.now).catch(() => ({ ok: true }) as { ok: boolean });
-      if (perAddress.ok && features.stripe) {
+      if (perAddress.ok && (await stripeKeys()).mode !== "off") {
         try {
           const donorId = donorIdOf(email);
           const gifts = await stripeGiftsOf(donorId);

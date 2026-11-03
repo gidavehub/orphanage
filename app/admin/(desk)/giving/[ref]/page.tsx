@@ -5,7 +5,7 @@ import { GiftView } from "@/components/admin/records/GiftView";
 import { RecordSkeleton } from "@/components/admin/shell/ListSkeleton";
 import { requireStaff, toShellViewer } from "@/lib/server/auth/session";
 import { getGiftDetail } from "@/lib/server/dal/donations";
-import { features } from "@/lib/server/env";
+import { stripeKeys } from "@/lib/server/payments/keys";
 import { moveGift, refundCardAction } from "../actions";
 
 export async function generateMetadata({ params }: { params: Promise<{ ref: string }> }): Promise<Metadata> {
@@ -24,9 +24,9 @@ export default function GiftPage({ params }: { params: Promise<{ ref: string }> 
 async function Panel({ params }: { params: Promise<{ ref: string }> }) {
   const v = await requireStaff("donation.read", "donation.manage");
   const { ref } = await params;
-  const d = await getGiftDetail(decodeURIComponent(ref));
+  const [d, keys] = await Promise.all([getGiftDetail(decodeURIComponent(ref)), stripeKeys()]);
   // Card gifts are refunded through Stripe (its confirmation updates the gift); others use "Record refund".
-  const cardRefund = features.stripe && d.online && d.canWrite && d.amount && ["received", "acknowledged", "allocated", "completed"].includes(d.status);
+  const cardRefund = keys.mode !== "off" && d.online && d.canWrite && d.amount && ["received", "acknowledged", "allocated", "completed"].includes(d.status);
   return (
     <>
       {cardRefund ? (

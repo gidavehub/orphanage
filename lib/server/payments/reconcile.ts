@@ -15,7 +15,7 @@ export type SweepReport = { checked: number; applied: number; expired: number; f
 
 export async function sweepOpenIntents(now: number = Date.now(), limit = 20): Promise<SweepReport> {
   const report: SweepReport = { checked: 0, applied: 0, expired: 0, failed: 0 };
-  const stripe = getStripe();
+  const stripe = await getStripe();
   if (!stripe) return report;
   const page = await getStore().list<DonationIntent>(C.donationIntents, {
     where: [

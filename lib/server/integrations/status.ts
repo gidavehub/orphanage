@@ -1,7 +1,8 @@
 import "server-only";
 
 // Integration status cards (integrations §2.2) for Settings › Connections, the boot log and the
-// practice ribbon. Env-only and cheap: no network calls. checkIntegration() ("Check again") is
+// practice ribbon. Cheap: no network calls. Card payments read the cached card setup (keys saved in
+// Settings › Connections, else the STRIPE_* variables); everything else reads the environment. checkIntegration() ("Check again") is
 // env-only for now; I6 adds harmless live probes in lib/server/integrations/probe.ts.
 // Only variable NAMES are ever shown, never values.
 
@@ -9,6 +10,7 @@ import { COPY } from "@/lib/admin/copy";
 import type { IntegrationStatus } from "@/lib/model/dto";
 import { env, features, resolveBackend } from "@/lib/server/env";
 import { emailMode, maskAddress } from "@/lib/server/email/provider";
+import { getCardSetup, modeOf } from "@/lib/server/payments/keys";
 
 function firebaseStatus(): IntegrationStatus {
   let backend: ReturnType<typeof resolveBackend> | "error";
@@ -42,15 +44,16 @@ function firebaseStatus(): IntegrationStatus {
   };
 }
 
-function stripeStatus(): IntegrationStatus {
-  const envNames = ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_CURRENCIES"];
-  if (!features.stripe) {
-    return { id: "stripe", state: "off", headline: "Card payments are off", meaning: "People can still pledge, and you can record gifts here. Card payments start once Stripe is connected.", envNames };
+async function stripeStatus(): Promise<IntegrationStatus> {
+  const envNames = ["STRIPE_SECRET_KEY", "STRIPE_PUBLISHABLE_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_CURRENCIES"];
+  const card = await getCardSetup();
+  if (card.mode === "off") {
+    return { id: "stripe", state: "off", headline: "Card payments are off", meaning: "People can still pledge, and you can record gifts here. Card payments start once the Stripe keys are added.", envNames };
   }
-  if (!features.stripeLive) {
+  if (card.mode === "test") {
     return { id: "stripe", state: "test", headline: "Card payments are in test mode", meaning: "Only test cards work. Test gifts are not counted in totals.", envNames };
   }
-  if (!features.stripeWebhook && env.vercelEnv === "production") {
+  if (!card.webhook && env.vercelEnv === "production") {
     return {
       id: "stripe",
       state: "problem",
@@ -59,7 +62,7 @@ function stripeStatus(): IntegrationStatus {
       envNames,
     };
   }
-  return { id: "stripe", state: "connected", headline: "Card payments are on", meaning: `Cards are accepted in ${env.stripe.currencies.join(", ")} where Settings › Giving allows.`, envNames };
+  return { id: "stripe", state: "connected", headline: "Card payments are on", meaning: `Cards are accepted in ${card.currencies.join(", ")} where Settings › Giving allows.`, envNames };
 }
 
 function emailStatus(): IntegrationStatus {
@@ -90,14 +93,14 @@ function zoomStatus(): IntegrationStatus {
   return { id: "zoom", state: "connected", headline: "Zoom is connected", meaning: "Staff can create a Zoom meeting when booking a session.", envNames };
 }
 
-/** Every integration's status, from the environment only. Never throws. */
-export function integrationStatuses(): IntegrationStatus[] {
-  return [firebaseStatus(), stripeStatus(), emailStatus(), aiStatus(), zoomStatus()];
+/** Every integration's status. Never throws. */
+export async function integrationStatuses(): Promise<IntegrationStatus[]> {
+  return [firebaseStatus(), await stripeStatus(), emailStatus(), aiStatus(), zoomStatus()];
 }
 
-/** "Check again" for one integration (env-only until I6 adds probes). */
+/** "Check again" for one integration (no live probes until I6). */
 export async function checkIntegration(id: IntegrationStatus["id"]): Promise<IntegrationStatus> {
-  const found = integrationStatuses().find((s) => s.id === id);
+  const found = (await integrationStatuses()).find((s) => s.id === id);
   if (!found) throw new Error(`Unknown integration: ${id}`);
   return found;
 }
@@ -110,7 +113,8 @@ export function practiceRibbon(): PracticeRibbon | null {
   return { message: COPY["ribbon.practice"], actionLabel: COPY["ribbon.practiceAction"], href: "/admin/settings/email-log" };
 }
 
-/** One boot-log line: "data=local stripe=off email=mailbox ai=off zoom=manual turnstile=off". */
+/** One boot-log line: "data=local stripe=off email=mailbox ai=off zoom=manual turnstile=off". Stripe
+ * here is the STRIPE_SECRET_KEY variable only ("saved" keys are read per request, not at boot). */
 export function statusLine(): string {
   let data: string;
   try {
@@ -118,6 +122,6 @@ export function statusLine(): string {
   } catch {
     data = "error";
   }
-  const stripe = features.stripe ? (features.stripeLive ? "live" : "test") : "off";
+  const stripe = env.stripe.secretKey ? modeOf(env.stripe.secretKey) : "saved-or-off";
   return `data=${data} stripe=${stripe} email=${emailMode()} ai=${features.ai ? "on" : "off"} zoom=${features.zoomApi ? "api" : "manual"} turnstile=${features.turnstile ? "on" : "off"}`;
 }

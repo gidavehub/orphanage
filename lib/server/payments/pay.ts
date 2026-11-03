@@ -16,6 +16,7 @@ import { log } from "@/lib/server/log";
 import { getPaymentSettings } from "@/lib/server/public/settings";
 import { signTokenFor, utcDay } from "@/lib/server/security/hmac";
 import { absolute } from "@/lib/server/url";
+import { stripeKeys } from "./keys";
 import type { HavenMeta } from "./metadata";
 import { ensureCauseProduct } from "./products";
 import { effectiveRoutes } from "./routing";
@@ -33,12 +34,12 @@ export async function payLaterPledges(): Promise<Array<{ ref: string; amount: st
 
 /** A Checkout URL that completes pledged gift `ref`, or null when Stripe is off or the gift isn't payable. */
 export async function payLinkSession(ref: string, base: string): Promise<string | null> {
-  const stripe = getStripe();
+  const stripe = await getStripe();
   if (!stripe) return null;
   const d = await readDonation(ref);
   if (!d || d.kind !== "cash" || !d.cash || d.status !== "pledged") return null;
-  const settings = await getPaymentSettings();
-  if (effectiveRoutes(settings)[d.cash.amount.currency] !== "stripe") return null;
+  const [settings, card] = await Promise.all([getPaymentSettings(), stripeKeys()]);
+  if (effectiveRoutes(settings, card)[d.cash.amount.currency] !== "stripe") return null;
   const slug = d.causeSlug ?? "general";
   const product = await ensureCauseProduct(stripe, { slug, title: slug === "general" ? "Where it's needed most" : slug.replace(/-/g, " ") });
   const meta: HavenMeta = {
@@ -74,7 +75,7 @@ export async function payLinkSession(ref: string, base: string): Promise<string 
 
 /** Queues `card_payment_link` for pledged gifts whose donors asked for a card link. */
 export async function sendCardPaymentLinks(refs: string[], v: Viewer): Promise<{ queued: number }> {
-  if (!getStripe()) return { queued: 0 };
+  if (!(await getStripe())) return { queued: 0 };
   let queued = 0;
   for (const ref of refs.slice(0, 100)) {
     const d = await readDonation(ref);

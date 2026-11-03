@@ -565,6 +565,8 @@ export const EMAIL_TEMPLATE_LABEL: Record<EmailTemplateId, string> = {
   staff_password_reset: "Password reset",
   staff_sign_in_code: "Sign-in code",
   staff_access_changed: "Access changed",
+  stripe_keys_request: "Add the Stripe keys",
+  stripe_keys_changed: "Stripe keys changed",
   staff_alert: "Something new for you",
   staff_alert_digest: "Morning summary",
   post_review_ready: "Draft ready for review",

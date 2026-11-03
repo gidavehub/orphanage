@@ -14,6 +14,7 @@ import { contentStore } from "./store";
 import { readMediaIndexUncached } from "@/lib/media/index";
 import { mediaIdsIn } from "./gate";
 import { env, firebaseServiceAccount } from "@/lib/server/env";
+import { getCardSetup } from "@/lib/server/payments/keys";
 
 export type LaunchGroup = "content" | "figures" | "images" | "contact" | "partners" | "policies" | "setup" | "data";
 
@@ -87,10 +88,12 @@ function missingProductionEnv(): string[] {
   return missing;
 }
 
-function missingRecommendedEnv(): string[] {
+/** Card payments: the keys saved in Settings › Connections, else the STRIPE_* variables. */
+async function missingCardSetup(): Promise<string[]> {
+  const card = await getCardSetup();
   const missing: string[] = [];
-  if (!env.stripe.secretKey) missing.push("STRIPE_SECRET_KEY");
-  if (!env.stripe.webhookSecret) missing.push("STRIPE_WEBHOOK_SECRET");
+  if (card.mode === "off") missing.push("Stripe secret key");
+  if (!card.webhook) missing.push("Stripe webhook signing secret");
   return missing;
 }
 
@@ -269,7 +272,7 @@ export async function getLaunchReadiness(): Promise<LaunchItem[]> {
       examples: missing,
     }),
   );
-  const recommended = missingRecommendedEnv();
+  const recommended = await missingCardSetup();
   items.push(
     item({
       id: "recommended-env",
@@ -277,7 +280,7 @@ export async function getLaunchReadiness(): Promise<LaunchItem[]> {
       title: recommended.length ? "Online card payments are not connected yet" : "Online card payments are connected",
       detail: "Without Stripe keys, every gift is a pledge and the team emails payment details.",
       count: recommended.length,
-      href: "/admin/settings/connections",
+      href: "/admin/settings/connections/stripe",
       severity: "should",
       examples: recommended,
     }),

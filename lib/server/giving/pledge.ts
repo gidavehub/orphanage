@@ -30,7 +30,8 @@ import type { CauseView } from "@/lib/content/types";
 import { countryName } from "@/lib/countries";
 import { CURRENCIES } from "@/lib/model/enums";
 import { LOCAL_PAYMENT_METHOD_LABEL } from "@/lib/model/labels";
-import { env, features, resolveBackend } from "@/lib/server/env";
+import { env, resolveBackend } from "@/lib/server/env";
+import { getCardSetup } from "@/lib/server/payments/keys";
 import { effectiveRoutes } from "@/lib/server/payments/routing";
 import { categoryOfLabel, type GivingConfig, type WidgetCause } from "@/components/donate/model";
 
@@ -305,8 +306,8 @@ export function toWidgetCause(c: CauseView): WidgetCause {
 
 /** Everything the widget needs: display config, routes and limits, and every visible cause. */
 export async function loadGiving(): Promise<{ config: GivingConfig; causes: WidgetCause[] }> {
-  const [donate, payment, causes, contact] = await Promise.all([getDonateConfig(), getPaymentSettings(), getCauses({ liveOnly: false }), getContact()]);
-  const routes = effectiveRoutes(payment);
+  const [donate, payment, causes, contact, card] = await Promise.all([getDonateConfig(), getPaymentSettings(), getCauses({ liveOnly: false }), getContact(), getCardSetup()]);
+  const routes = effectiveRoutes(payment, card);
   const methods: GivingConfig["methods"] = {};
   for (const c of CURRENCIES) {
     const list = payment.instructions[c]?.methods ?? [];
@@ -332,7 +333,7 @@ export async function loadGiving(): Promise<{ config: GivingConfig; causes: Widg
       fx: payment.fx,
       methods,
       donationsEmail: contact.teamEmails.donations,
-      pledgeBadge: !features.stripe && env.vercelEnv !== "production",
+      pledgeBadge: card.mode === "off" && env.vercelEnv !== "production",
       unavailable: resolveBackend() === "unavailable",
     },
     causes: causes.map(toWidgetCause),

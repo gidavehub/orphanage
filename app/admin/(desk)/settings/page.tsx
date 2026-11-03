@@ -28,7 +28,7 @@ export default function SettingsPage() {
 
 async function Cards() {
   const v = await requireStaff(...AREA_PERMS.settings.read);
-  const off = integrationStatuses().filter((s) => s.state !== "connected").length;
+  const off = (await integrationStatuses()).filter((s) => s.state !== "connected").length;
   const cards = [
     hasAny(v, "settings.giving", "settings.manage") && { href: "/admin/settings/giving", icon: HandCoins, title: "Giving", line: "How people pay, bank and mobile-money details, receipts and thank-yous." },
     hasAny(v, "newsletter.read", "settings.manage") && { href: "/admin/settings/newsletter", icon: Newspaper, title: "Newsletter", line: "Who gets Haven's updates, and what was sent." },

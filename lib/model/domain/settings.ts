@@ -3,9 +3,9 @@
 // (lib/server/public/settings.ts) fall back to these when a document is absent.
 
 import type { EmailTemplateId } from "../email";
-import type { Currency, LocalPaymentMethod, Millis, RetentionPolicyId, Uid } from "../enums";
+import type { Currency, LocalPaymentMethod, Millis, RetentionPolicyId, Sealed, Uid } from "../enums";
 
-export const SETTINGS_DOC_IDS = ["payment", "org", "notifications", "forms", "retention", "emailCopy", "seed"] as const;
+export const SETTINGS_DOC_IDS = ["payment", "org", "notifications", "forms", "retention", "emailCopy", "seed", "stripe"] as const;
 export type SettingsDocId = (typeof SETTINGS_DOC_IDS)[number];
 
 /* ── settings/payment (Settings › Giving, finance) ─────────────────────── */
@@ -87,6 +87,32 @@ export const DEFAULT_PAYMENT_SETTINGS: PaymentSettings = {
     autoSend: true,
   },
 };
+
+/* ── settings/stripe (Settings › Connections › Card payments) ──────────── */
+
+/** What Stripe may charge: GMD always takes the local route (bank or mobile money). */
+export const CARD_CURRENCIES = ["USD", "GBP", "EUR"] as const satisfies readonly Currency[];
+
+/**
+ * Haven's Stripe keys, pasted by a super admin (lib/server/payments/keys.ts). The secret key and the
+ * webhook signing secret are sealed; the publishable key is public by design. Server-only reads.
+ */
+export interface StripeKeysDoc {
+  secretKey: Sealed;
+  publishableKey: string | null;
+  webhookSecret: Sealed | null;
+  /** The endpoint Haven made in Stripe ("Set it up for me"), so it can be replaced or removed. */
+  webhookEndpointId: string | null;
+  mode: "test" | "live";
+  currencies: Currency[];
+  portalConfigId: string | null;
+  account: { id: string; name: string | null } | null;
+  /** The last four characters of each key, for the masked display. */
+  hints: { secretKey: string; publishableKey: string | null; webhookSecret: string | null };
+  updatedAt: Millis;
+  updatedBy: { uid: Uid; name: string };
+  via: "settings" | "link";
+}
 
 /* ── settings/org ──────────────────────────────────────────────────────── */
 

@@ -16,7 +16,7 @@ export const maxDuration = 30;
 
 export async function GET(request: NextRequest): Promise<Response> {
   const id = request.nextUrl.searchParams.get("session_id") ?? "";
-  const stripe = getStripe();
+  const stripe = await getStripe();
   if (stripe && /^cs_(test|live)_[A-Za-z0-9]+$/.test(id)) {
     try {
       const session = await stripe.checkout.sessions.retrieve(id);

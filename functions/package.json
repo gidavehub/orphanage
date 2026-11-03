@@ -1,0 +1,23 @@
+{
+  "name": "haven-api",
+  "private": true,
+  "description": "Haven's back end (/api and the daily jobs) on Firebase Functions. Built by scripts/build-api.mjs.",
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "dependencies": {
+    "firebase-admin": "14.5.0",
+    "firebase-functions": "7.4.0",
+    "next": "16.3.6",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "server-only": "0.0.1",
+    "sharp": "0.35.4"
+  },
+  "overrides": {
+    "jwks-rsa": {
+      "jose": "5.10.0"
+    }
+  }
+}

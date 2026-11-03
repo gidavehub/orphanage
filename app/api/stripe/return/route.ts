@@ -1,7 +1,7 @@
-import { revalidateTag } from "next/cache";
 import type { NextRequest } from "next/server";
 import { TAG } from "@/lib/cache/tags";
 import { routes } from "@/lib/routes";
+import { expireTags } from "@/lib/server/cache";
 import { drainAfterResponse } from "@/lib/server/email/outbox";
 import { log } from "@/lib/server/log";
 import { applyCheckoutSession } from "@/lib/server/payments/apply";
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest): Promise<Response> {
       const session = await stripe.checkout.sessions.retrieve(id);
       if (session.status === "complete") {
         const outcome = await applyCheckoutSession(session, { source: "return" });
-        if (outcome.touchedTotals) revalidateTag(TAG.donationTotals, "max");
+        if (outcome.touchedTotals) expireTags([TAG.donationTotals], "max");
         drainAfterResponse();
       }
     } catch (err) {

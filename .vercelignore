@@ -9,3 +9,5 @@ node_modules
 media-src
 coverage
 *.tsbuildinfo
+# The back end runs on Firebase Functions (functions/index.js), never on Vercel.
+functions

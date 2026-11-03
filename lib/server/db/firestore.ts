@@ -14,7 +14,7 @@ import "server-only";
 // This module and lib/server/storage/gcs.ts and lib/server/auth/firebase.ts are the only importers of
 // firebase-admin (PLAN §4.2 rule 4); the other two reuse adminApp() from here.
 
-import { cert, getApps, initializeApp, type App } from "firebase-admin/app";
+import { applicationDefault, cert, getApps, initializeApp, type App } from "firebase-admin/app";
 import {
   FieldPath,
   FieldValue,
@@ -56,6 +56,17 @@ export function adminApp(): App {
   const existing = getApps().find((a) => a?.name === APP_NAME);
   if (existing) return existing;
   const sa = firebaseServiceAccount();
+  if (!sa && env.onGoogleCloud) {
+    // The /api function runs as the Firebase Admin SDK service account: no key file needed.
+    return initializeApp(
+      {
+        credential: applicationDefault(),
+        projectId: process.env.GCLOUD_PROJECT ?? process.env.GOOGLE_CLOUD_PROJECT ?? env.firebase.projectId ?? undefined,
+        ...(env.firebase.storageBucket ? { storageBucket: env.firebase.storageBucket } : {}),
+      },
+      APP_NAME,
+    );
+  }
   if (!sa) throw new BackendUnavailableError("Firestore credentials are missing (FIREBASE_SERVICE_ACCOUNT_JSON).");
   return initializeApp(
     {

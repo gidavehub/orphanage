@@ -53,9 +53,12 @@ const tail = (key: string) => key.slice(-4);
 /** What people paste often carries spaces, line breaks or quotes. */
 const clean = (raw: unknown) => (typeof raw === "string" ? raw.replace(/\s+/g, "").replace(/^["'`]+|["'`]+$/g, "") : "");
 
-/** The webhook address Stripe calls. "Set it up for me" needs it to be public https. */
+/**
+ * The webhook address Stripe calls: the /api function's own address on Google Cloud (HAVEN_API_ORIGIN),
+ * so Stripe never goes through Vercel; the site's /api otherwise. "Set it up for me" needs public https.
+ */
 export function webhookUrl(): string {
-  return absolute("/api/stripe/webhook");
+  return env.apiOrigin ? `${env.apiOrigin}/api/stripe/webhook` : absolute("/api/stripe/webhook");
 }
 
 function webhookCanBeMade(url: string): boolean {

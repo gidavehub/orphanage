@@ -386,7 +386,7 @@ export class LocalJsonAdapter implements DocStore {
   readonly kind = "local" as const;
 
   constructor() {
-    if (env.onVercel) throw new Error("The local data store cannot run on Vercel (read-only filesystem).");
+    if (env.hosted) throw new Error("The local data store cannot run when deployed (read-only filesystem).");
   }
 
   private async read<T>(p: string): Promise<WithId<T> | null> {

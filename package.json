@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "seed": "node scripts/dev/seed.mjs"
+    "seed": "node scripts/dev/seed.mjs",
+    "deploy:api": "node scripts/build-api.mjs && npx -y firebase-tools@latest deploy --only functions --project orphanage-project-511119 --force --non-interactive"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.131.0",

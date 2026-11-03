@@ -12,7 +12,7 @@ import "server-only";
 //   Backoff 1, 5, 30, 120, 720 minutes, then failed (super admins are told in-app).
 // - cancelEmail(): queued/held → cancelled; scheduled → provider cancel → cancelled (or sent).
 
-import { after } from "next/server";
+import { afterResponse } from "@/lib/server/after";
 import { getContact } from "@/lib/content/read";
 import type { EmailSuppression, OutboxEmail, OutboxStatus } from "@/lib/model/domain/system";
 import type { EmailCopySettings } from "@/lib/model/domain/settings";
@@ -151,15 +151,12 @@ export async function enqueueEmail(input: EnqueueInput): Promise<{ id: string; d
 }
 
 /**
- * Drains the outbox after the response is sent (Server Actions and Route Handlers). Outside a request
- * scope it drains in the background instead. Never throws.
+ * Drains the outbox once the response is ready (Server Actions and Route Handlers): after() on Vercel,
+ * the request's hold on Cloud Functions (lib/server/after.ts). Outside a request it drains in the
+ * background instead. Never throws.
  */
 export function drainAfterResponse(): void {
-  try {
-    after(() => drainOutbox().then(() => undefined));
-  } catch {
-    void drainOutbox().catch(() => undefined);
-  }
+  afterResponse(() => drainOutbox());
 }
 
 /* ── Delivery ──────────────────────────────────────────────────────────── */

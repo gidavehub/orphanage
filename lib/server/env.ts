@@ -50,8 +50,12 @@ function oldDataKeys(raw: string | null): Record<string, string> {
   return {};
 }
 
-const vercelEnvRaw = val(process.env.VERCEL_ENV);
+// Two hosts (owner, 2026-11-03: "only the front end must live on Vercel"): the pages on Vercel, and
+// every /api route on Cloud Functions for Firebase (functions/index.js), which sets
+// HAVEN_DEPLOY_ENV=production there. Cloud Run, under the function, sets K_SERVICE.
+const vercelEnvRaw = val(process.env.VERCEL_ENV) ?? val(process.env.HAVEN_DEPLOY_ENV);
 const onVercel = process.env.VERCEL === "1";
+const onGoogleCloud = Boolean(process.env.K_SERVICE);
 
 const webApiKey = val(process.env.NEXT_PUBLIC_FIREBASE_API_KEY);
 const webAuthDomain = val(process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN);
@@ -67,10 +71,14 @@ export const env = {
   nodeEnv: (process.env.NODE_ENV ?? "development") as "development" | "production" | "test",
   vercelEnv: (vercelEnvRaw === "production" || vercelEnvRaw === "preview" || vercelEnvRaw === "development"
     ? vercelEnvRaw
-    : onVercel
+    : onVercel || onGoogleCloud
       ? "preview"
       : "development") as VercelEnv,
   onVercel,
+  /** The back end on Cloud Functions for Firebase. Credentials come from its service account. */
+  onGoogleCloud,
+  /** Deployed (Vercel or Google Cloud): a read-only filesystem, no practice helpers, real secrets. */
+  hosted: onVercel || onGoogleCloud,
   /** Deployment host without protocol (Vercel sets it). */
   vercelUrl: val(process.env.VERCEL_URL),
   vercelProductionUrl: val(process.env.VERCEL_PROJECT_PRODUCTION_URL),
@@ -82,6 +90,17 @@ export const env = {
     | "local"
     | null,
   cronSecret: val(process.env.CRON_SECRET),
+  /**
+   * The /api function's own address (https://api-….run.app): Stripe, Resend and Cloud Scheduler call
+   * it directly, never through Vercel. Browsers still use /api on the site, which Vercel passes on.
+   */
+  apiOrigin: val(process.env.HAVEN_API_ORIGIN)?.replace(/\/+$/, "") ?? null,
+  /** Lets the /api function refresh tags in Vercel's cache (lib/server/cache.ts). */
+  vercelApi: {
+    token: val(process.env.VERCEL_TOKEN) === "unset" ? null : val(process.env.VERCEL_TOKEN),
+    projectId: val(process.env.HAVEN_VERCEL_PROJECT_ID),
+    teamId: val(process.env.HAVEN_VERCEL_TEAM_ID),
+  },
   hmacSecret: val(process.env.HAVEN_HMAC_SECRET),
   lookupSecret: val(process.env.HAVEN_LOOKUP_SECRET),
   dataKey: {
@@ -92,6 +111,7 @@ export const env = {
   firebase: {
     serviceAccountJson: val(process.env.FIREBASE_SERVICE_ACCOUNT_JSON),
     storageBucket: webStorageBucket,
+    projectId: webProjectId,
     webConfig:
       webApiKey && webAuthDomain && webProjectId && webStorageBucket && webAppId
         ? ({ apiKey: webApiKey, authDomain: webAuthDomain, projectId: webProjectId, storageBucket: webStorageBucket, appId: webAppId } as FirebaseWebConfig)
@@ -199,16 +219,18 @@ let backendCache: Backend | undefined;
  *    `firestore` without credentials logs the problem and resolves to `unavailable`, so public pages
  *    still render from seeds instead of crashing.
  * 2. Firebase server credentials present → `firestore`.
- * 3. Otherwise `local` off Vercel, `unavailable` on Vercel.
+ * 3. On Google Cloud (the /api function) → `firestore`, with the function's service account.
+ * 4. Otherwise `local` on this computer, `unavailable` when deployed.
  */
 export function resolveBackend(): Backend {
   if (backendCache) return backendCache;
   const forced = env.backendOverride;
   if (forced === "local") {
-    if (env.onVercel) throw new Error("HAVEN_BACKEND=local cannot run on Vercel: its filesystem is read-only. Remove HAVEN_BACKEND.");
+    if (env.hosted) throw new Error("HAVEN_BACKEND=local cannot run when deployed: the filesystem is read-only. Remove HAVEN_BACKEND.");
     return (backendCache = "local");
   }
-  const hasCredentials = firebaseServiceAccount() !== null;
+  // On Google Cloud the function's own service account is the credential (no key file).
+  const hasCredentials = firebaseServiceAccount() !== null || env.onGoogleCloud;
   if (forced === "firestore") {
     if (!hasCredentials) {
       console.error("[haven] HAVEN_BACKEND=firestore but Firestore credentials are missing (FIREBASE_SERVICE_ACCOUNT_JSON). Data is unavailable; public pages use the built-in content.");
@@ -217,7 +239,7 @@ export function resolveBackend(): Backend {
     return (backendCache = "firestore");
   }
   if (hasCredentials) return (backendCache = "firestore");
-  return (backendCache = env.onVercel ? "unavailable" : "local");
+  return (backendCache = env.hosted ? "unavailable" : "local");
 }
 
 export type Features = {
@@ -257,15 +279,15 @@ const warnedSecrets = new Set<string>();
 
 /**
  * The token-signing (`hmac`) or email-lookup (`lookup`) secret. Uses HAVEN_HMAC_SECRET /
- * HAVEN_LOOKUP_SECRET when set. Off Vercel, a missing secret falls back to a development-only value
- * derived on this computer (with a one-time warning); on Vercel it throws, so callers degrade
+ * HAVEN_LOOKUP_SECRET when set. On this computer, a missing secret falls back to a development-only
+ * value derived here (with a one-time warning); deployed it throws, so callers degrade
  * (token links switched off) rather than signing with a guessable secret.
  */
 export function devSecret(name: "hmac" | "lookup"): string {
   const configured = name === "hmac" ? env.hmacSecret : env.lookupSecret;
   if (configured) return configured;
   const variable = name === "hmac" ? "HAVEN_HMAC_SECRET" : "HAVEN_LOOKUP_SECRET";
-  if (env.onVercel) throw new Error(`${variable} is not set.`);
+  if (env.hosted) throw new Error(`${variable} is not set.`);
   if (!warnedSecrets.has(name)) {
     warnedSecrets.add(name);
     warn(`${variable} is not set; using a development-only secret derived on this computer.`);

@@ -53,3 +53,9 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# the /api function's build and settings (scripts/build-api.mjs writes them)
+/functions/app/
+/functions/node_modules/
+/functions/.env
+/functions/.secret.local

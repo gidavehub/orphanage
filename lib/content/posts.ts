@@ -8,7 +8,6 @@ import "server-only";
 // - publishDuePosts(): flips scheduled posts whose time has come, from the tick cron and the admin's
 //   client effect (never during render), and expires their cache tags immediately (D16).
 
-import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import { gateReasons } from "./gate";
 import { POST_CATEGORY_LABEL, PostDraftSchema, PostSchema, type Post, type PostDraftInput, type StoredRecord } from "./schema";
@@ -47,6 +46,7 @@ import type { Millis } from "@/lib/model/enums";
 import { canTakeEdge, edgeById } from "@/lib/model/flows";
 import { STATUS_LABEL } from "@/lib/model/labels";
 import { systemActor, type SystemActor, type Viewer } from "@/lib/model/viewer";
+import { expireTags } from "@/lib/server/cache";
 import { getStore } from "@/lib/server/db";
 import { log } from "@/lib/server/log";
 import { notify, recipientsFor } from "@/lib/server/notify";
@@ -313,7 +313,7 @@ export async function createAiDraft(post: AiDraftInput, actor: SystemActor | Vie
 
 /**
  * Publishes every scheduled post whose time has come, as the system "Scheduler", and expires its
- * cache tags immediately (revalidateTag(tag, { expire: 0 }), D16). Call from route handlers and
+ * cache tags immediately (expireTags(tags, "now"): here and on Vercel, D16). Call from route handlers and
  * Server Actions only, never during render.
  */
 export async function publishDuePosts(now: number = Date.now()): Promise<{ published: string[]; failed: string[] }> {
@@ -333,7 +333,7 @@ export async function publishDuePosts(now: number = Date.now()): Promise<{ publi
       log.warn("post.publish_due_failed", { id: rec.id, error: outcome.result.error.kind });
     }
   }
-  for (const t of tags) revalidateTag(t, { expire: 0 });
+  expireTags([...tags], "now");
   return { published, failed };
 }
 

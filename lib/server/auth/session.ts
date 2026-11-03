@@ -150,7 +150,7 @@ export async function requireRecentAuth(v: Viewer, nextPath: string): Promise<vo
 function isSecureRequest(h: Headers): boolean {
   const proto = h.get("x-forwarded-proto")?.split(",")[0]?.trim().toLowerCase();
   if (proto) return proto === "https";
-  return env.onVercel;
+  return env.hosted;
 }
 
 /**

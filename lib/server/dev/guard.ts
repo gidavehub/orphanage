@@ -11,7 +11,7 @@ const LOCAL_SITE = /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\]|[a-z0-9.-]+\.loc
 
 /** True when practice-mode helpers may run. */
 export function devAllowed(): boolean {
-  if (env.onVercel) return false;
+  if (env.hosted) return false;
   // Hosted anywhere else with a real address but no Firebase keys: still no practice sign-in.
   if (env.siteUrl && !LOCAL_SITE.test(env.siteUrl)) return false;
   try {

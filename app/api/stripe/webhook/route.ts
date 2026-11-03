@@ -1,6 +1,6 @@
 import Stripe from "stripe";
-import { revalidateTag } from "next/cache";
 import { TAG } from "@/lib/cache/tags";
+import { expireTags } from "@/lib/server/cache";
 import { drainAfterResponse } from "@/lib/server/email/outbox";
 import { log } from "@/lib/server/log";
 import { isEventProcessed, recordEventError } from "@/lib/server/payments/events";
@@ -50,7 +50,7 @@ export async function POST(request: Request): Promise<Response> {
 
   try {
     const outcome = await dispatch(event);
-    if (outcome.touchedTotals) revalidateTag(TAG.donationTotals, "max");
+    if (outcome.touchedTotals) expireTags([TAG.donationTotals], "max");
     drainAfterResponse();
     log.info("stripe.webhook.applied", { id: event.id, type: event.type, result: outcome.result });
     return Response.json({ received: true, result: outcome.result }, { headers: NO_STORE });

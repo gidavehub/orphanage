@@ -18,7 +18,7 @@ import { readRecordFor } from "@/lib/server/dal/_shared";
 import { getStore } from "@/lib/server/db";
 import { C, docPath } from "@/lib/server/db/collections";
 import { resolveBackend } from "@/lib/server/env";
-import { caseRecorder } from "../selftest";
+import { caseRecorder, passWith, skipped } from "../selftest";
 import { PRACTICE_STAFF, practiceUid } from "../seed";
 import type { Suite } from "../types";
 
@@ -93,7 +93,7 @@ export const suite: Suite = {
     /* 1. This request's session through requireStaff() ─────────────────── */
     const current = await getViewer();
     await t.check("requireStaff() with this request's session", async () => {
-      if (!current) return "no session on this request (rbac.mjs signs in per role first); skipped";
+      if (!current) return skipped("no session on this request (rbac.mjs signs in per role first)");
       const v = await requireStaff();
       if (v.uid !== current.uid) throw new Error("requireStaff() returned a different person");
       const wrong: string[] = [];
@@ -110,11 +110,11 @@ export const suite: Suite = {
         if (allowed !== should) wrong.push(`${p}: ${allowed ? "allowed" : "denied"}`);
       }
       if (wrong.length) throw new Error(`unexpected: ${wrong.join(", ")}`);
-      return `roles = ${current.roles.join(", ")}; ${Object.keys(EXPECT).length} permission checks`;
+      return passWith(`roles = ${current.roles.join(", ")}; ${Object.keys(EXPECT).length} permission checks`);
     });
 
     await t.check("the shell view of this person carries no email", () => {
-      if (!current) return "no session; skipped";
+      if (!current) return skipped("no session on this request");
       return !("email" in toShellViewer(current));
     });
 
@@ -128,7 +128,7 @@ export const suite: Suite = {
         if (staff.status !== "active") throw new Error(`status is ${staff.status}`);
         if (!staff.roles.includes(role)) throw new Error(`roles are ${staff.roles.join(", ")}`);
         viewers.set(role, viewerFor(role, staff));
-        return `${PRACTICE_STAFF[role].displayName}`;
+        return passWith(PRACTICE_STAFF[role].displayName);
       });
     }
 
@@ -145,7 +145,7 @@ export const suite: Suite = {
           for (const p of v.perms) if (/\.(manage|contact|publish|edit)$/.test(p)) wrong.push(`${p} must never reach a viewer`);
         }
         if (wrong.length) throw new Error(wrong.join("; "));
-        return `${v.perms.size} permissions`;
+        return passWith(`${v.perms.size} permissions`);
       });
 
       await t.check(`${role}: places`, () => {
@@ -161,14 +161,14 @@ export const suite: Suite = {
         }
         if (role === "counsellor" && !all.includes("counselling")) throw new Error("counsellor without My sessions");
         if (role === "counsellor" && [...pill, ...more].find((p) => p.area === "counselling")?.label !== "My sessions") throw new Error("counsellor label must be My sessions");
-        return `pill: ${pill.map((p) => p.label).join(" · ")}; dock: ${dockPrimary.label}`;
+        return passWith(`pill: ${pill.map((p) => p.label).join(" · ")}; dock: ${dockPrimary.label}`);
       });
     }
 
     /* 3. The DAL record check (concern isolation, D84) ──────────────────── */
     const [concernRef, supportRef] = await Promise.all([firstId(C.safeguardingConcerns), firstId(C.supportRequests)]);
     await t.check("concerns open only for safeguarding officers and super admins", async () => {
-      if (!concernRef) return "no seeded concern; skipped";
+      if (!concernRef) return skipped("no seeded concern");
       const wrong: string[] = [];
       for (const role of ROLES) {
         const v = viewers.get(role);
@@ -177,11 +177,11 @@ export const suite: Suite = {
         if (opened !== SAFEGUARDING_PLACE.includes(role)) wrong.push(`${role}: ${opened ? "opened" : "refused"}`);
       }
       if (wrong.length) throw new Error(wrong.join("; "));
-      return `checked ${concernRef.slice(0, 4)}… for ${viewers.size} roles`;
+      return passWith(`checked ${concernRef.slice(0, 4)}… for ${viewers.size} roles`);
     });
 
     await t.check("support requests open only for roles that read them", async () => {
-      if (!supportRef) return "no seeded support request; skipped";
+      if (!supportRef) return skipped("no seeded support request");
       const wrong: string[] = [];
       for (const role of ROLES) {
         const v = viewers.get(role);
@@ -191,12 +191,12 @@ export const suite: Suite = {
         if (opened !== should) wrong.push(`${role}: ${opened ? "opened" : "refused"}`);
       }
       if (wrong.length) throw new Error(wrong.join("; "));
-      return `checked ${supportRef} for ${viewers.size} roles`;
+      return passWith(`checked ${supportRef} for ${viewers.size} roles`);
     });
 
     await t.check("a made-up reference reads exactly like a refused one", async () => {
       const sa = viewers.get("super_admin");
-      if (!sa) return "no super admin; skipped";
+      if (!sa) return skipped("no super admin");
       return (await readRecordFor(sa, "HVN-SR-1999-9999")) === null && (await readRecordFor(sa, "not a reference")) === null;
     });
 

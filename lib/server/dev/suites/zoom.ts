@@ -7,7 +7,7 @@ import "server-only";
 import { buildIcs } from "@/lib/server/calendar/ics";
 import { env } from "@/lib/server/env";
 import { createZoomMeeting, zoomApiOn } from "@/lib/server/zoom/meetings";
-import { caseRecorder } from "../selftest";
+import { caseRecorder, skipped } from "../selftest";
 import type { Suite } from "../types";
 
 const field = (ics: string, name: string) => ics.split("\r\n").find((l) => l.startsWith(`${name}:`))?.slice(name.length + 1) ?? null;
@@ -19,7 +19,7 @@ export const suite: Suite = {
     const base = { reference: "HVN-AP-2026-0042", startsAt: Date.UTC(2026, 10, 3, 14, 0), durationMin: 45, url: "https://zoom.us/j/1234567890?pwd=abc" };
 
     await t.check("without Zoom details, no meeting is made and the button is hidden", async () => {
-      if (env.zoom.accountId && env.zoom.clientId && env.zoom.clientSecret) return "skipped: Zoom is connected";
+      if (env.zoom.accountId && env.zoom.clientId && env.zoom.clientSecret) return skipped("Zoom is connected");
       const r = await createZoomMeeting({ reference: base.reference, startsAt: base.startsAt, durationMin: 45, timezone: "Africa/Banjul" });
       return r === null && !zoomApiOn();
     });

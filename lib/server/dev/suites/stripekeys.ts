@@ -46,11 +46,6 @@ function admin(authTime = Date.now()): Viewer {
   };
 }
 
-/** Fails the case with a detail (caseRecorder counts a returned string as a pass). */
-function fail(detail: string): never {
-  throw new Error(detail);
-}
-
 const base = async () => (await getStore().get<StripeKeysDoc>(STRIPE_KEYS_PATH))?.updatedAt ?? 0;
 
 export const suite: Suite = {
@@ -70,7 +65,7 @@ export const suite: Suite = {
 
       await t.check("with nothing saved, Haven uses the server settings", async () => {
         const k = await stripeKeys();
-        return k.source === (env.stripe.secretKey ? "env" : "none") && k.secretKey === env.stripe.secretKey ? true : fail(`source=${k.source}`);
+        return k.source === (env.stripe.secretKey ? "env" : "none") && k.secretKey === env.stripe.secretKey ? true : `source=${k.source}`;
       });
 
       await t.check("saving needs a sign-in in the last 30 minutes", async () => {
@@ -96,7 +91,7 @@ export const suite: Suite = {
           /same mode/.test(f(mixed).publishableKey ?? "") &&
           /whsec_/.test(f(badHook).webhookSecret ?? "") &&
           Boolean(f(noCurrency).currencies);
-        return ok ? true : fail(JSON.stringify({ swapped: f(swapped), mixed: f(mixed), badHook: f(badHook), noCurrency: f(noCurrency) }));
+        return ok ? true : JSON.stringify({ swapped: f(swapped), mixed: f(mixed), badHook: f(badHook), noCurrency: f(noCurrency) });
       });
 
       await t.check("pasted keys are saved sealed, shown only by their last four characters", async () => {
@@ -104,19 +99,19 @@ export const suite: Suite = {
         const doc = await store.get<StripeKeysDoc>(STRIPE_KEYS_PATH);
         const raw = JSON.stringify(doc);
         return r.ok && r.data.mode === "test" && r.data.webhook === "pasted" && doc?.hints.secretKey === "Abcd" && doc.hints.webhookSecret === "Ijkl" && !raw.includes(SK) && !raw.includes(WH) && doc.currencies.join() === "USD,GBP"
-          ? true : fail(`ok=${r.ok} ${r.ok ? "" : JSON.stringify(r.error)} plain=${raw.includes(SK)}`);
+          ? true : `ok=${r.ok} ${r.ok ? "" : JSON.stringify(r.error)} plain=${raw.includes(SK)}`;
       });
 
       await t.check("Stripe calls and the webhook then use the saved keys", async () => {
         const k = await stripeKeys();
-        return k.source === "saved" && k.secretKey === SK && k.webhookSecret === WH && k.publishableKey === PK && k.mode === "test" ? true : fail(`source=${k.source} mode=${k.mode}`);
+        return k.source === "saved" && k.secretKey === SK && k.webhookSecret === WH && k.publishableKey === PK && k.mode === "test" ? true : `source=${k.source} mode=${k.mode}`;
       });
 
       await t.check("blank boxes keep what's saved", async () => {
         const r = await saveStripeKeys(v, { secretKey: "", publishableKey: "", webhook: "keep", currencies: ["USD"], baseUpdatedAt: await base() }, { via: "settings", offline: true });
         forgetStripeKeys();
         const k = await stripeKeys();
-        return r.ok && r.data.webhook === "kept" && k.secretKey === SK && k.webhookSecret === WH && k.currencies.join() === "USD" ? true : fail(`ok=${r.ok} ${r.ok ? r.data.webhook : JSON.stringify(r.error)}`);
+        return r.ok && r.data.webhook === "kept" && k.secretKey === SK && k.webhookSecret === WH && k.currencies.join() === "USD" ? true : `ok=${r.ok} ${r.ok ? r.data.webhook : JSON.stringify(r.error)}`;
       });
 
       await t.check("an out-of-date form can't overwrite someone else's save", async () => {
@@ -126,12 +121,12 @@ export const suite: Suite = {
 
       await t.check("keys for another mode won't keep the old webhook", async () => {
         const r = await saveStripeKeys(v, { secretKey: SK_LIVE, publishableKey: PK_LIVE, webhook: "keep", currencies: ["USD"], baseUpdatedAt: await base() }, { via: "settings", offline: true });
-        return !r.ok && r.error.kind === "validation" && Boolean(r.error.fields.webhook) ? true : fail(JSON.stringify(r.ok ? r.data : r.error));
+        return !r.ok && r.error.kind === "validation" && Boolean(r.error.fields.webhook) ? true : JSON.stringify(r.ok ? r.data : r.error);
       });
 
       await t.check("every change is emailed to super admins", async () => {
         const page = await store.list<OutboxEmail>(C.emailOutbox, { where: [{ field: "template", op: "==", value: "stripe_keys_changed" }], orderBy: { field: "createdAt", dir: "desc" }, limit: 10 });
-        return page.items.some((e) => e.createdAt >= startedAt) ? true : fail("no stripe_keys_changed email");
+        return page.items.some((e) => e.createdAt >= startedAt) ? true : "no stripe_keys_changed email";
       });
 
       await t.check("a secure link works for its person, and stops when cancelled", async () => {
@@ -144,7 +139,7 @@ export const suite: Suite = {
         const open = await peekKeyLink(token);
         const cancelled = await cancelKeyLink(v, id);
         const after = await peekKeyLink(token);
-        return open?.recipientUid === "selftest-keys-other" && cancelled.ok && after === null ? true : fail(`open=${Boolean(open)} cancelled=${cancelled.ok} after=${Boolean(after)}`);
+        return open?.recipientUid === "selftest-keys-other" && cancelled.ok && after === null ? true : `open=${Boolean(open)} cancelled=${cancelled.ok} after=${Boolean(after)}`;
       });
 
       await t.check("expired and made-up links don't work", async () => {
@@ -159,7 +154,7 @@ export const suite: Suite = {
       await t.check("removing the saved keys goes back to the server settings", async () => {
         const r = await removeStripeKeys(v);
         const k = await stripeKeys();
-        return r.ok && !(await store.get(STRIPE_KEYS_PATH)) && k.source !== "saved" ? true : fail(`ok=${r.ok} source=${k.source}`);
+        return r.ok && !(await store.get(STRIPE_KEYS_PATH)) && k.source !== "saved" ? true : `ok=${r.ok} source=${k.source}`;
       });
     } finally {
       if (before) await store.set(STRIPE_KEYS_PATH, before);

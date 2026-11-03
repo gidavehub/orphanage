@@ -12,7 +12,7 @@ import { emailMode, replyToFor } from "@/lib/server/email/provider";
 import { renderEmail } from "@/lib/server/email/render";
 import { getTemplate } from "@/lib/server/email/templates";
 import { SUBJECT_RE } from "@/lib/server/email/types";
-import { caseRecorder } from "../selftest";
+import { caseRecorder, skipped } from "../selftest";
 import type { Suite } from "../types";
 
 export const suite: Suite = {
@@ -88,7 +88,7 @@ export const suite: Suite = {
     });
 
     await t.check("without a Resend key every email is held, never sent", () => {
-      if (env.email.resendKey) return `skipped: a key is set (mode ${emailMode()})`;
+      if (env.email.resendKey) return skipped(`a key is set (mode ${emailMode()})`);
       return emailMode() === "mailbox";
     });
 

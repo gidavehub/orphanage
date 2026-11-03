@@ -7,7 +7,7 @@ import "server-only";
 import { getStore } from "@/lib/server/db";
 import { ConflictError, F, MissingIndexError, NotFoundError } from "@/lib/server/db/store";
 import { BLOB_PATH, getBlobStore, verifyDevFileToken } from "@/lib/server/storage";
-import { caseRecorder, dropScratch, scratchRoot } from "../selftest";
+import { caseRecorder, dropScratch, passWith, scratchRoot, skipped } from "../selftest";
 import type { Suite } from "../types";
 
 type Row = {
@@ -39,7 +39,20 @@ export const suite: Suite = {
     const col = `${root}/supportRequests`;
     const other = `${root}/counters`;
     try {
-      await t.check(`adapter is ${store.kind}`, () => `kind=${store.kind}`);
+      await t.check("the recorder fails a check that returns false, a string or throws", async () => {
+        const r = caseRecorder();
+        await r.check("a", () => true);
+        await r.check("b", () => passWith("note"));
+        await r.check("c", () => skipped("not here"));
+        await r.check("d", () => false);
+        await r.check("e", () => "status=wrong");
+        await r.check("f", () => {
+          throw new Error("boom");
+        });
+        const oks = r.cases.map((c) => c.ok).join();
+        return oks === "true,true,true,false,false,false" && r.cases[4].detail === "status=wrong" ? true : `ok=${oks}`;
+      });
+      await t.check(`adapter is ${store.kind}`, () => passWith(`kind=${store.kind}`));
 
       await t.check("create, then read back with its id", async () => {
         await store.create(`${col}/A1`, row(1));

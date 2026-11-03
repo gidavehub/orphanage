@@ -46,18 +46,43 @@ export async function dropScratch(root: string): Promise<void> {
   }
 }
 
-/** Collects cases: `await t.check(name, async () => …)` records ok/fail with the thrown message. */
+/** A pass that carries a note (what was checked, a count). Made by passWith() and skipped(). */
+export type Passed = { readonly passed: string };
+
+/** Passes the case with a note, e.g. `return passWith("12 permissions")`. */
+export function passWith(note: string): Passed {
+  return { passed: note };
+}
+
+/** Passes a case that can't run here (no session on the request, a live key set), saying why. */
+export function skipped(reason: string): Passed {
+  return { passed: `skipped: ${reason}` };
+}
+
+export type CheckResult = boolean | string | Passed;
+
+/**
+ * Collects cases: `await t.check(name, async () => …)`. A case passes when `fn` returns true or
+ * passWith()/skipped(). It fails when it returns false, returns a string (the string says what was
+ * wrong, e.g. `return ok ? true : "status=pending"`), or throws.
+ */
 export function caseRecorder() {
   const cases: SuiteCase[] = [];
   return {
     cases,
-    /** Passes when `fn` returns true (or a detail string) and does not throw. */
-    async check(name: string, fn: () => Promise<boolean | string> | boolean | string): Promise<boolean> {
+    async check(name: string, fn: () => Promise<CheckResult> | CheckResult): Promise<boolean> {
       try {
         const r = await fn();
-        const ok = r === true || typeof r === "string";
-        cases.push({ name, ok, ...(typeof r === "string" ? { detail: r } : ok ? {} : { detail: "expectation not met" }) });
-        return ok;
+        if (r === true) {
+          cases.push({ name, ok: true });
+          return true;
+        }
+        if (typeof r === "object" && r !== null && typeof r.passed === "string") {
+          cases.push({ name, ok: true, detail: r.passed });
+          return true;
+        }
+        cases.push({ name, ok: false, detail: typeof r === "string" && r ? r : "expectation not met" });
+        return false;
       } catch (err) {
         cases.push({ name, ok: false, detail: err instanceof Error ? `${err.name}: ${err.message}` : String(err) });
         return false;

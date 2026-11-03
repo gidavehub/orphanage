@@ -28,7 +28,7 @@ import { deliverOutboxItem, outboxId, outboxPath } from "@/lib/server/email/outb
 import { readMailboxFile, removeMailboxFile } from "@/lib/server/email/transports/mailbox";
 import { getViewer, toShellViewer } from "@/lib/server/auth/session";
 import { resolveBackend } from "@/lib/server/env";
-import { caseRecorder } from "../selftest";
+import { caseRecorder, passWith, skipped } from "../selftest";
 import type { Suite } from "../types";
 
 export const suite: Suite = {
@@ -38,10 +38,10 @@ export const suite: Suite = {
 
     await t.check("getViewer() for this request", async () => {
       const v = await getViewer();
-      if (!v) return "no session on this request (sign in with POST /api/dev/session?role=…)";
+      if (!v) return skipped("no session on this request (sign in with POST /api/dev/session?role=…)");
       const shell = toShellViewer(v);
       if ("email" in shell) throw new Error("ShellViewer must not carry the email");
-      return `roles = ${JSON.stringify(v.roles)}; uid = ${v.uid}; backend = ${v.backend}; perms = ${v.perms.size}`;
+      return passWith(`roles = ${JSON.stringify(v.roles)}; uid = ${v.uid}; backend = ${v.backend}; perms = ${v.perms.size}`);
     });
 
     await t.check("scrypt hash verifies the right password only", async () => {

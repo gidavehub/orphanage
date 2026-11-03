@@ -14,6 +14,7 @@ import { safetyFlags } from "@/lib/content/safety";
 import { actorOf, auditTx } from "@/lib/server/audit";
 import { getStore } from "@/lib/server/db";
 import { settingsPath } from "@/lib/server/db/collections";
+import { baseUrl } from "@/lib/server/url";
 import { renderEmail } from "./render";
 import { getTemplate, subjectRefKey } from "./templates";
 import type { EditableCopy, EmailVars } from "./types";
@@ -106,8 +107,9 @@ export async function getEmailCopy(): Promise<{ copy: EmailCopySettings; updated
 }
 
 /** The subject and HTML a template renders with the given wording and sample values. */
-export function previewEmail(id: EmailTemplateId, copy: EditableCopy, origin?: string): { subject: string; html: string; text: string } {
+export function previewEmail(id: EmailTemplateId, copy: EditableCopy, origin: string = baseUrl()): { subject: string; html: string; text: string } {
   const def = getTemplate(id);
+  // One origin for the sample links and the renderer, or the renderer drops them as foreign.
   const vars = sampleVars(id, origin);
   const { html, text } = renderEmail(def.build(vars, copy), { baseUrl: origin, unsubscribeUrl: typeof vars.unsubscribeUrl === "string" ? vars.unsubscribeUrl : null });
   return { subject: def.subject(vars), html, text };

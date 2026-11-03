@@ -17,7 +17,7 @@ import { readMailboxFile, removeMailboxFile } from "@/lib/server/email/transport
 import { SUBJECT_RE } from "@/lib/server/email/types";
 import { resolveBackend } from "@/lib/server/env";
 import { isSealed } from "@/lib/server/security/seal";
-import { caseRecorder } from "../selftest";
+import { caseRecorder, passWith } from "../selftest";
 import type { Suite } from "../types";
 
 const CATEGORY_WORDS = /\b(counsell?ing|medical|legal|school fees|abuse|neglect|safeguarding|child protection|concern)\b/i;
@@ -31,7 +31,7 @@ export const suite: Suite = {
     const created: string[] = [];
     const year = new Date().getUTCFullYear();
     try {
-      await t.check(`email mode is ${emailMode()}`, () => `mode=${emailMode()}`);
+      await t.check(`email mode is ${emailMode()}`, () => passWith(`mode=${emailMode()}`));
 
       let firstId = "";
       await t.check("enqueue → queued record with a fixed subject", async () => {

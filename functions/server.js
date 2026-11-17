@@ -1,10 +1,12 @@
-// Serves Haven's own Next.js build (./app, copied by scripts/build-api.mjs) for one request, so every
-// app/api/** route runs here exactly as written. Kept apart from index.js so it can be tried
+// Serves Haven's own Next.js build (./app, copied by scripts/build.mjs) for one request: every
+// page, Server Action and app/api/** route runs here exactly as written. Vercel serves only the
+// static files and passes everything else here. Kept apart from index.js so it can be tried
 // locally without the Firebase wrapper (scripts/try-api.mjs).
 //
 // Put back or added before Next sees a request:
 //  - the body: Firebase reads it first (req.rawBody), and the webhooks check signatures on it;
-//  - the host: Vercel passes the visitor's host as x-forwarded-host (cookies, origin checks);
+//  - the host: Vercel passes the visitor's host as x-forwarded-host (cookies, Server Action origin
+//    checks); its preview addresses count as the site too;
 //  - the visitor's IP (x-vercel-forwarded-for, which lib/server/security/spam.ts reads first):
 //    Google appends the connecting address to x-forwarded-for, so for a call through Vercel the
 //    visitor is the entry before it, and for a direct call (Stripe, Resend, Scheduler) the last one;
@@ -16,7 +18,7 @@ const { AsyncLocalStorage } = require("node:async_hooks");
 const { Readable } = require("node:stream");
 
 const APP = path.join(__dirname, "app");
-const OURS = /^(orphanage-delta\.vercel\.app|(www\.)?haveninternationalorphanages\.org)$/;
+const OURS = /^(orphanage-[a-z0-9-]+\.vercel\.app|(www\.)?haveninternationalorphanages\.org)$/;
 const HOLD_LIMIT_MS = 20_000;
 
 const holds = new AsyncLocalStorage();
@@ -27,8 +29,6 @@ let ready = null;
 function nextHandler() {
   ready ||= (async () => {
     const { config } = require("./app/.next/required-server-files.json");
-    // Nothing is kept between API calls (no-store-cache.js says why).
-    config.cacheHandlers = { ...(config.cacheHandlers || {}), default: path.join(__dirname, "no-store-cache.js") };
     process.env.__NEXT_PRIVATE_STANDALONE_CONFIG = JSON.stringify(config);
     process.chdir(APP);
     const next = require("next");

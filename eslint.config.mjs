@@ -214,7 +214,7 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Local practice-mode data.
     ".data/**",
-    // The /api function (CommonJS) and the build copied into it (scripts/build-api.mjs).
+    // The /api function (CommonJS) and the build copied into it (scripts/build.mjs).
     "functions/**",
   ]),
 ]);

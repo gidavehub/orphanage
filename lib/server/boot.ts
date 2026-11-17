@@ -26,7 +26,7 @@ export const PROD_VARIABLES = [
 ] as const;
 
 export function missingProdVariables(): string[] {
-  // The /api function has no key file: it runs as the Firebase Admin service account.
+  // The function has no key file: it runs as the Firebase Admin service account.
   return PROD_VARIABLES.filter((name) => !(env.onGoogleCloud && name === "FIREBASE_SERVICE_ACCOUNT_JSON") && !process.env[name]?.trim());
 }
 

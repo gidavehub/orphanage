@@ -1,14 +1,15 @@
-// HAVEN'S BACK END, ON FIREBASE FUNCTIONS.
+// HAVEN'S SERVER, ON FIREBASE FUNCTIONS.
 //
-// The owner's split (2026-11-03: "No function must live on Vercel… only the front end"): the pages
-// stay on Vercel; every /api route runs here, in one Cloud Function for Firebase (2nd gen,
-// us-central1, beside Firestore's nam5). Vercel passes /api/* through to it unchanged (vercel.json),
-// so browsers keep calling the site's own /api. Stripe, Resend and Cloud Scheduler call this
+// The owner's rule (2026-11-03, again 2026-11-17: "Make sure all my functions are in cloud function
+// not Vercel"): every page render, Server Action and /api route runs here, in one Cloud Function for
+// Firebase (2nd gen, us-central1, beside Firestore's nam5). Vercel holds only the static files (the
+// browser's JavaScript, CSS, fonts and public/) and passes every other request here unchanged
+// (scripts/build.mjs writes its routing). Stripe, Resend and Cloud Scheduler call this
 // function's own address directly and never touch Vercel.
 //
 // It runs as the Firebase Admin SDK service account, so Firestore, Storage, Auth and signed links
 // need no key file. Secrets come from Secret Manager; plain settings from functions/.env, which
-// scripts/build-api.mjs writes from Vercel's production values. The daily jobs that Vercel Cron used
+// scripts/build.mjs writes from Vercel's production values. The daily jobs that Vercel Cron used
 // to run are scheduled functions below; each calls its /api/cron route with the cron secret.
 
 const { onRequest } = require("firebase-functions/v2/https");
@@ -25,8 +26,6 @@ const SECRETS = [
   defineSecret("HAVEN_LOOKUP_SECRET"),
   defineSecret("RESEND_API_KEY"),
   defineSecret("RESEND_WEBHOOK_SECRET"),
-  // "unset" until the owner makes a Vercel token (lib/server/cache.ts says what it is for).
-  defineSecret("VERCEL_TOKEN"),
   CRON_SECRET,
 ];
 
@@ -43,13 +42,18 @@ exports.api = onRequest(
     region: REGION,
     serviceAccount: SERVICE_ACCOUNT,
     secrets: SECRETS,
-    memory: "1GiB",
+    memory: "2GiB",
+    // Two CPUs are refused while the project's CPU quota is the default (Cloud Run checks CPU × its
+    // service-level maximum); one is plenty for one instance at Haven's traffic.
     cpu: 1,
     concurrency: 80,
     timeoutSeconds: 300,
-    // One kept warm, so a sign-in or a donation never waits for a cold start.
+    // Exactly one instance, kept warm. Next keeps its page cache in memory: an admin's edit expires a
+    // tag on the instance that saved it, and a second instance would go on showing the old page. One
+    // instance serving 80 requests at a time is plenty for Haven; to scale out, give Next a shared
+    // cache first (cacheHandlers backed by Firestore), then raise maxInstances.
     minInstances: 1,
-    maxInstances: 20,
+    maxInstances: 1,
     invoker: "public",
   },
   (req, res) => server().serve(req, res),

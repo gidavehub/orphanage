@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// Tries the Firebase Functions back end on this computer before a deploy: functions/server.js (the
-// built app in functions/app) behind a plain Node server, with functions/.env loaded and no secrets.
-// Checks that Next starts under the wrapper and answers the guarded routes the way production must,
-// and that the response hold runs after-response work before a response ends.
+// Tries the Firebase function on this computer before a deploy: functions/server.js (the built app
+// in functions/app) behind a plain Node server, with functions/.env loaded and no secrets. Checks
+// that Next starts under the wrapper, renders pages and answers the guarded routes the way
+// production must, and that the response hold runs after-response work before a response ends.
 //
-//   node scripts/build-api.mjs && node scripts/try-api.mjs
+//   node scripts/build.mjs && node scripts/try-api.mjs
 
 import fs from "node:fs";
 import http from "node:http";
@@ -64,7 +64,7 @@ const server = http.createServer((req, res) => {
 await new Promise((r) => server.listen(0, r));
 const base = `http://localhost:${server.address().port}`;
 const call = async (p, init = {}) => {
-  const r = await fetch(base + p, { ...init, headers: { "x-forwarded-host": "orphanage-delta.vercel.app", "x-forwarded-for": "203.0.113.7, 198.51.100.1", ...(init.headers ?? {}) } });
+  const r = await fetch(base + p, { redirect: "manual", ...init, headers: { "x-forwarded-host": "orphanage-delta.vercel.app", "x-forwarded-for": "203.0.113.7, 198.51.100.1", ...(init.headers ?? {}) } });
   return { status: r.status, text: await r.text() };
 };
 try {
@@ -81,6 +81,15 @@ try {
   check(dev.status === 404, "practice helpers are switched off", String(dev.status));
   const page = await call("/api/nothing-here");
   check(page.status === 404, "an unknown /api path is a 404", String(page.status));
+  // The pages run here too now (Vercel holds only static files).
+  const home = await call("/");
+  check(home.status === 200 && /<html/i.test(home.text), "the home page renders", String(home.status));
+  const login = await call("/admin/login");
+  check(login.status === 200, "the team sign-in page renders", String(login.status));
+  const admin = await call("/admin");
+  check([302, 303, 307].includes(admin.status), "the admin sends a visitor without a session to sign in", String(admin.status));
+  const img = await call(`/_next/image?url=${encodeURIComponent("/media/img/about.fb8d8339.webp")}&w=640&q=75`, { headers: { accept: "image/webp" } });
+  check(img.status === 200, "the image optimizer resizes a photo from public/", `${img.status}${img.status === 200 ? "" : ` ${img.text.slice(0, 120)}`}`);
 } finally {
   server.close();
 }

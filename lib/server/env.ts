@@ -50,9 +50,10 @@ function oldDataKeys(raw: string | null): Record<string, string> {
   return {};
 }
 
-// Two hosts (owner, 2026-11-03: "only the front end must live on Vercel"): the pages on Vercel, and
-// every /api route on Cloud Functions for Firebase (functions/index.js), which sets
-// HAVEN_DEPLOY_ENV=production there. Cloud Run, under the function, sets K_SERVICE.
+// Where Haven runs (owner, 2026-11-17: "all my functions are in cloud function not Vercel"): every
+// page, Server Action and /api route on Cloud Functions for Firebase (functions/index.js), which
+// sets HAVEN_DEPLOY_ENV=production; Cloud Run, under the function, sets K_SERVICE. Vercel only
+// serves the static files. VERCEL_ENV remains for a Vercel build, should one ever run.
 const vercelEnvRaw = val(process.env.VERCEL_ENV) ?? val(process.env.HAVEN_DEPLOY_ENV);
 const onVercel = process.env.VERCEL === "1";
 const onGoogleCloud = Boolean(process.env.K_SERVICE);
@@ -91,16 +92,15 @@ export const env = {
     | null,
   cronSecret: val(process.env.CRON_SECRET),
   /**
-   * The /api function's own address (https://api-….run.app): Stripe, Resend and Cloud Scheduler call
-   * it directly, never through Vercel. Browsers still use /api on the site, which Vercel passes on.
+   * The function's own address (https://api-….run.app): Stripe, Resend and Cloud Scheduler call it
+   * directly, never through Vercel. Browsers use the site's address, which Vercel passes on.
    */
   apiOrigin: val(process.env.HAVEN_API_ORIGIN)?.replace(/\/+$/, "") ?? null,
-  /** Lets the /api function refresh tags in Vercel's cache (lib/server/cache.ts). */
-  vercelApi: {
-    token: val(process.env.VERCEL_TOKEN) === "unset" ? null : val(process.env.VERCEL_TOKEN),
-    projectId: val(process.env.HAVEN_VERCEL_PROJECT_ID),
-    teamId: val(process.env.HAVEN_VERCEL_TEAM_ID),
-  },
+  /**
+   * scripts/build.mjs only: a short-lived Google access token, so the production build reads
+   * Firestore for the pages it prerenders (the function serves them). Never set at run time.
+   */
+  buildAccessToken: val(process.env.HAVEN_BUILD_ACCESS_TOKEN),
   hmacSecret: val(process.env.HAVEN_HMAC_SECRET),
   lookupSecret: val(process.env.HAVEN_LOOKUP_SECRET),
   dataKey: {
@@ -219,7 +219,8 @@ let backendCache: Backend | undefined;
  *    `firestore` without credentials logs the problem and resolves to `unavailable`, so public pages
  *    still render from seeds instead of crashing.
  * 2. Firebase server credentials present → `firestore`.
- * 3. On Google Cloud (the /api function) → `firestore`, with the function's service account.
+ * 3. On Google Cloud (the function) → `firestore`, with the function's service account; in the
+ *    production build → `firestore`, with HAVEN_BUILD_ACCESS_TOKEN.
  * 4. Otherwise `local` on this computer, `unavailable` when deployed.
  */
 export function resolveBackend(): Backend {
@@ -229,8 +230,9 @@ export function resolveBackend(): Backend {
     if (env.hosted) throw new Error("HAVEN_BACKEND=local cannot run when deployed: the filesystem is read-only. Remove HAVEN_BACKEND.");
     return (backendCache = "local");
   }
-  // On Google Cloud the function's own service account is the credential (no key file).
-  const hasCredentials = firebaseServiceAccount() !== null || env.onGoogleCloud;
+  // On Google Cloud the function's own service account is the credential (no key file); the
+  // production build reads with a short-lived token instead.
+  const hasCredentials = firebaseServiceAccount() !== null || env.onGoogleCloud || Boolean(env.buildAccessToken);
   if (forced === "firestore") {
     if (!hasCredentials) {
       console.error("[haven] HAVEN_BACKEND=firestore but Firestore credentials are missing (FIREBASE_SERVICE_ACCOUNT_JSON). Data is unavailable; public pages use the built-in content.");

@@ -18,13 +18,14 @@ import { applicationDefault, cert, getApps, initializeApp, type App } from "fire
 import {
   FieldPath,
   FieldValue,
+  Firestore,
   Timestamp,
   initializeFirestore,
   type DocumentReference,
-  type Firestore,
   type Query,
   type WhereFilterOp,
 } from "firebase-admin/firestore";
+import { OAuth2Client } from "google-auth-library";
 import { env, firebaseServiceAccount } from "@/lib/server/env";
 import { decodeCursor, encodeCursor, normaliseDoc, normaliseValue, parseCollectionPath, parseDocPath } from "./convert";
 import {
@@ -57,7 +58,7 @@ export function adminApp(): App {
   if (existing) return existing;
   const sa = firebaseServiceAccount();
   if (!sa && env.onGoogleCloud) {
-    // The /api function runs as the Firebase Admin SDK service account: no key file needed.
+    // The function runs as the Firebase Admin SDK service account: no key file needed.
     return initializeApp(
       {
         credential: applicationDefault(),
@@ -78,8 +79,21 @@ export function adminApp(): App {
   );
 }
 
+/**
+ * The production build (scripts/build.mjs) reads Firestore for the pages it prerenders with a
+ * short-lived access token. firebase-admin accepts only a key or application-default credentials,
+ * so the build talks to Firestore directly; it never needs Auth or Storage.
+ */
+function buildFirestore(token: string): Firestore {
+  const authClient = new OAuth2Client();
+  authClient.setCredentials({ access_token: token, expiry_date: Date.now() + 50 * 60_000 });
+  return new Firestore({ projectId: env.firebase.projectId ?? undefined, preferRest: true, ignoreUndefinedProperties: true, authClient });
+}
+
 function firestore(): Firestore {
   if (!globals.firestore) {
+    const buildToken = !env.hosted && !firebaseServiceAccount() ? env.buildAccessToken : null;
+    if (buildToken) return (globals.firestore = buildFirestore(buildToken));
     const db = initializeFirestore(adminApp(), { preferRest: true });
     try {
       db.settings({ ignoreUndefinedProperties: true });

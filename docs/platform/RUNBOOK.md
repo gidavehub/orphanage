@@ -2,7 +2,7 @@
 
 The order to switch Haven from practice mode to the live site. Each step can be checked before the next. What the organisation must provide first is listed in `HANDOFF.md`.
 
-Run the checks against the deployed site where a step says so. Keep every secret out of chat and email: paste values only into Vercel's Environment Variables or Google Secret Manager (§6).
+Run the checks against the deployed site where a step says so. Keep every secret out of chat and email: paste values only into Google Secret Manager (§6).
 
 ## 0. Before you start
 
@@ -80,21 +80,26 @@ Check, with a test key first (`sk_test_…` or `rk_test_…`): a gift with card 
 
 ## 6. Hosting and scheduled jobs
 
-Since 2026-11-17 the owner's rule holds: **no function runs on Vercel**.
-- **Vercel** serves the pages, and passes `/api/*` to the back end (`vercel.json` rewrite). Its build leaves `app/api` out (`scripts/front-end-only.mjs`).
-- **Cloud Functions for Firebase** run every `/api` route (`functions/index.js`, function `api`, us-central1, https://api-dvfijsfwpq-uc.a.run.app). The function runs as the Firebase Admin SDK service account, so it needs no key file.
-- **Secrets** live in Secret Manager: `HAVEN_DATA_KEY`, `HAVEN_HMAC_SECRET`, `HAVEN_LOOKUP_SECRET`, `CRON_SECRET`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`, `VERCEL_TOKEN`.
-- **Plain settings** go in `functions/.env`, written by the build.
-- **Shared secrets:** `HAVEN_HMAC_SECRET` and `HAVEN_LOOKUP_SECRET` must match in Secret Manager and in Vercel (pages sign and check the same links).
+The owner's rule (2026-11-03, again 2026-11-17): **no function runs on Vercel.**
+
+- **Cloud Functions for Firebase** run all of Haven's server code: every page render, Server Action and `/api` route.
+  - The function is `api` (`functions/index.js`), in us-central1, at https://api-dvfijsfwpq-uc.a.run.app.
+  - It is exactly one instance, kept warm. Next's page cache lives in its memory, so a second instance would show stale pages after an edit. To scale out, give Next a shared cache handler first.
+  - It runs as the Firebase Admin SDK service account, so it needs no key file.
+- **Vercel** holds only the static files (`/_next/static`, `public/`). It passes every other request to the function, and it has no functions and keeps no copy of any page.
+  - Deploys are prebuilt (`.vercel/output`, written by `scripts/build.mjs`).
+  - Pushing to GitHub no longer deploys (`vercel.json`: `git.deploymentEnabled: false`).
+- **Secrets** live in Secret Manager: `HAVEN_DATA_KEY`, `HAVEN_HMAC_SECRET`, `HAVEN_LOOKUP_SECRET`, `CRON_SECRET`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`. Plain settings go in `functions/.env`, written by the build. Vercel's environment variables are no longer used at run time; the build reads only its `NEXT_PUBLIC_*` values and the email addresses.
 - **Webhooks:** Stripe and Resend call the function's own address, never Vercel.
 - **Scheduled jobs** are Firebase scheduled functions on Cloud Scheduler, each calling its `/api/cron/*` route with `CRON_SECRET`:
   - `cronTick` runs every 15 minutes. Its daily block runs once, at or after 06:00 UTC.
   - `cronRetention` runs at 02:30.
   - `cronEditorial` runs at 08:00.
-- **Deploying:**
-  - After any change under `app/api`, `lib` or `functions`: `npm run deploy:api`. It builds with Vercel's production public values, copies the build to `functions/app`, then `firebase deploy --only functions`. Try it locally first with `node scripts/try-api.mjs`.
-  - Pages: `npx vercel --prod --yes`.
-- **`VERCEL_TOKEN`** lets the back end refresh the pages' cache when a payment moves the totals or a scheduled post goes live: `npx firebase functions:secrets:set VERCEL_TOKEN --project orphanage-project-511119`, then `npm run deploy:api`. Without it, those pages catch up within a day.
+- **Deploying:** run `npm run deploy`.
+  - It builds once with production's public values, reading production Firestore through a one-hour token from the gcloud configuration `haven`.
+  - It then deploys the function, then the static files to Vercel.
+  - Try the function first with `node scripts/try-api.mjs`.
+  - The order matters: until Vercel has the new static files, the function serves them itself.
 
 Check: `gcloud scheduler jobs run firebase-schedule-cronTick-us-central1 --location us-central1`, then the function's log shows `/api/cron/tick 200` with every step `ok`.
 

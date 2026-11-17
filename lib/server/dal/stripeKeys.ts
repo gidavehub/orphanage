@@ -54,7 +54,7 @@ const tail = (key: string) => key.slice(-4);
 const clean = (raw: unknown) => (typeof raw === "string" ? raw.replace(/\s+/g, "").replace(/^["'`]+|["'`]+$/g, "") : "");
 
 /**
- * The webhook address Stripe calls: the /api function's own address on Google Cloud (HAVEN_API_ORIGIN),
+ * The webhook address Stripe calls: the function's own address on Google Cloud (HAVEN_API_ORIGIN),
  * so Stripe never goes through Vercel; the site's /api otherwise. "Set it up for me" needs public https.
  */
 export function webhookUrl(): string {

@@ -1,7 +1,7 @@
 {
   "name": "haven-api",
   "private": true,
-  "description": "Haven's back end (/api and the daily jobs) on Firebase Functions. Built by scripts/build-api.mjs.",
+  "description": "Haven's server (every page, Server Action, /api route and the scheduled jobs) on Firebase Functions. Built by scripts/build.mjs.",
   "main": "index.js",
   "engines": {
     "node": "22"

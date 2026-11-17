@@ -41,6 +41,9 @@ function nextHandler() {
   return ready;
 }
 
+// Start Next with the container (the kept-warm instance included), not on the first visitor's call.
+nextHandler().catch((err) => console.error("Next did not start; the first request tries again.", err));
+
 /** The request as Next needs it: the body readable again, the visitor's host and address. */
 function asSent(req) {
   const body = req.rawBody && req.rawBody.length ? [req.rawBody] : [];

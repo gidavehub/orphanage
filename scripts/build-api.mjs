@@ -21,8 +21,8 @@ const FUNCTIONS = path.join(ROOT, "functions");
 const OUT = path.join(FUNCTIONS, "app");
 const NEXT = path.join(ROOT, ".next");
 
-/** The function's own address (gcloud functions describe api --region us-central1). */
-const API_ORIGIN = process.env.HAVEN_API_ORIGIN ?? "";
+/** The function's own address (gcloud functions describe api --region us-central1 → serviceConfig.uri). */
+const API_ORIGIN = process.env.HAVEN_API_ORIGIN ?? "https://api-dvfijsfwpq-uc.a.run.app";
 /** Plain production values the function uses, besides NEXT_PUBLIC_*. */
 const PLAIN = ["EMAIL_FROM", "EMAIL_REPLY_TO"];
 
@@ -83,6 +83,9 @@ const rewrite = (dir) => {
 if (renames.length) rewrite(path.join(OUT, ".next", "server"));
 const wanted = JSON.parse(fs.readFileSync(path.join(FUNCTIONS, "package.json"), "utf8")).dependencies;
 for (const [, name] of renames) if (!wanted[name]) throw new Error(`The build needs ${name} at run time: add it to functions/package.json.`);
+// Files server code reads from disk at run time (the share images' fonts, which Next's not-found
+// page also loads), so even a wrong address answers a clean 404.
+fs.cpSync(path.join(ROOT, "assets"), path.join(OUT, "assets"), { recursive: true });
 // Next looks in .next/static when it starts, even with nothing to serve from it.
 fs.mkdirSync(path.join(OUT, ".next", "static"), { recursive: true });
 fs.writeFileSync(path.join(OUT, ".next", "static", ".keep"), "");

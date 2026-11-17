@@ -2,7 +2,7 @@
 
 The order to switch Haven from practice mode to the live site. Each step can be checked before the next. What the organisation must provide first is listed in `HANDOFF.md`.
 
-Run the checks against the deployed site where a step says so. Keep every secret out of chat and email: paste values only into Vercel's Environment Variables.
+Run the checks against the deployed site where a step says so. Keep every secret out of chat and email: paste values only into Vercel's Environment Variables or Google Secret Manager (§6).
 
 ## 0. Before you start
 
@@ -71,21 +71,32 @@ Check: Settings › Connections → "Send me a test email" arrives; the email lo
 1. Open the account under a registered entity (Stripe doesn't onboard businesses in The Gambia); request nonprofit pricing if eligible. Branding: forest `#1f715a`, marigold `#f5af08`, statement descriptor `HAVEN GIFT`.
 2. Customer emails: turn **off** successful-payment, refund and failed-payment emails (Haven sends its own).
 3. Customer portal: allow updating the card, invoice history and cancelling at period end; disallow switching plans and quantities; business links to `/policies/privacy` and `/policies/terms`.
-4. Webhook endpoint `https://<domain>/api/stripe/webhook`, API version **2026-09-30.endive**, events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`, `charge.refunded`, `charge.dispute.created`. Copy its secret into `STRIPE_WEBHOOK_SECRET`.
+4. Webhook: Settings › Connections › Card payments › "Set it up for me" makes it at the back end's own address (§6); by hand, `https://api-dvfijsfwpq-uc.a.run.app/api/stripe/webhook`, API version **2026-09-30.endive**, events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`, `charge.refunded`, `charge.dispute.created`. Copy its secret into `STRIPE_WEBHOOK_SECRET`.
 5. A restricted key (`rk_live_…`) with: Checkout Sessions, Products, Refunds, Customer portal **write**; Customers, Subscriptions, Invoices, Invoice Payments, PaymentIntents, Charges, Balance transactions **read**. Put it in `STRIPE_SECRET_KEY`. `STRIPE_CURRENCIES=USD,GBP,EUR` (add `GMD` only after a live GMD test).
 6. Radar: keep the defaults and add "Block if CVC check fails".
 7. Settings › Giving: choose card or local payment per currency, and enter the mobile-money and bank details.
 
 Check, with a test key first (`sk_test_…` or `rk_test_…`): a gift with card `4242 4242 4242 4242` reaches the thank-you page, appears in Giving as received, thanked and placed, and its receipt email is sent. A monthly gift creates a regular gift. Then switch to the live key. Donors who pledged "card: email me a link" while cards were off appear on Giving with **Send them a payment link**.
 
-## 6. Scheduled jobs
+## 6. Hosting and scheduled jobs
 
-`vercel.json` runs the tick daily at 06:00 UTC, retention at 02:30 and the editorial job at 08:00.
+Since 2026-11-17 the owner's rule holds: **no function runs on Vercel**.
+- **Vercel** serves the pages, and passes `/api/*` to the back end (`vercel.json` rewrite). Its build leaves `app/api` out (`scripts/front-end-only.mjs`).
+- **Cloud Functions for Firebase** run every `/api` route (`functions/index.js`, function `api`, us-central1, https://api-dvfijsfwpq-uc.a.run.app). The function runs as the Firebase Admin SDK service account, so it needs no key file.
+- **Secrets** live in Secret Manager: `HAVEN_DATA_KEY`, `HAVEN_HMAC_SECRET`, `HAVEN_LOOKUP_SECRET`, `CRON_SECRET`, `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`, `VERCEL_TOKEN`.
+- **Plain settings** go in `functions/.env`, written by the build.
+- **Shared secrets:** `HAVEN_HMAC_SECRET` and `HAVEN_LOOKUP_SECRET` must match in Secret Manager and in Vercel (pages sign and check the same links).
+- **Webhooks:** Stripe and Resend call the function's own address, never Vercel.
+- **Scheduled jobs** are Firebase scheduled functions on Cloud Scheduler, each calling its `/api/cron/*` route with `CRON_SECRET`:
+  - `cronTick` runs every 15 minutes. Its daily block runs once, at or after 06:00 UTC.
+  - `cronRetention` runs at 02:30.
+  - `cronEditorial` runs at 08:00.
+- **Deploying:**
+  - After any change under `app/api`, `lib` or `functions`: `npm run deploy:api`. It builds with Vercel's production public values, copies the build to `functions/app`, then `firebase deploy --only functions`. Try it locally first with `node scripts/try-api.mjs`.
+  - Pages: `npx vercel --prod --yes`.
+- **`VERCEL_TOKEN`** lets the back end refresh the pages' cache when a payment moves the totals or a scheduled post goes live: `npx firebase functions:secrets:set VERCEL_TOKEN --project orphanage-project-511119`, then `npm run deploy:api`. Without it, those pages catch up within a day.
 
-- **Pro plan:** change the tick's schedule in `vercel.json` to `*/15 * * * *` and delete `.github/workflows/cron-tick.yml`.
-- **Hobby plan:** keep the workflow; in GitHub add the repository secret `CRON_SECRET` and the variable `SITE_URL`. It calls the tick every 15 minutes.
-
-Check: `curl -H "Authorization: Bearer <CRON_SECRET>" https://<domain>/api/cron/tick` answers a JSON summary with every step `ok`.
+Check: `gcloud scheduler jobs run firebase-schedule-cronTick-us-central1 --location us-central1`, then the function's log shows `/api/cron/tick 200` with every step `ok`.
 
 ## 7. Optional services
 

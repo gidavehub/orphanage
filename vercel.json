@@ -1,8 +1,16 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "crons": [
-    { "path": "/api/cron/tick", "schedule": "0 6 * * *" },
-    { "path": "/api/cron/retention", "schedule": "30 2 * * *" },
-    { "path": "/api/cron/editorial", "schedule": "0 8 * * *" }
+  "buildCommand": "node scripts/front-end-only.mjs && next build",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://api-dvfijsfwpq-uc.a.run.app/api/:path*"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/:path*",
+      "headers": [{ "key": "x-vercel-enable-rewrite-caching", "value": "0" }]
+    }
   ]
 }

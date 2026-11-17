@@ -33,6 +33,11 @@ const SECRETS = [
 process.env.NODE_ENV = "production";
 process.env.HAVEN_DEPLOY_ENV ||= "production";
 
+// Loaded (and Next started) when the api function's container starts. The scheduled jobs share this
+// file but never load it: K_SERVICE names the function each container runs.
+const server = () => require("./server");
+if (process.env.FUNCTION_TARGET === "api" || process.env.K_SERVICE === "api") server();
+
 exports.api = onRequest(
   {
     region: REGION,
@@ -47,11 +52,11 @@ exports.api = onRequest(
     maxInstances: 20,
     invoker: "public",
   },
-  (req, res) => require("./server").serve(req, res),
+  (req, res) => server().serve(req, res),
 );
 
-/** One of the daily jobs: calls its /api/cron route on this back end, and fails loudly when it fails. */
-function daily(schedule, route) {
+/** A scheduled job: calls its /api/cron route on this back end, and fails loudly when it fails. */
+function scheduled(schedule, route) {
   return onSchedule(
     { schedule, timeZone: "UTC", region: REGION, serviceAccount: SERVICE_ACCOUNT, secrets: [CRON_SECRET], timeoutSeconds: 300, retryCount: 1, memory: "256MiB" },
     async () => {
@@ -65,7 +70,9 @@ function daily(schedule, route) {
   );
 }
 
-// The same times Vercel Cron used (vercel.json until 2026-11-03).
-exports.cronTick = daily("0 6 * * *", "/api/cron/tick");
-exports.cronRetention = daily("30 2 * * *", "/api/cron/retention");
-exports.cronEditorial = daily("0 8 * * *", "/api/cron/editorial");
+// The tick runs every 15 minutes, as Haven was designed to (lib/server/tick.ts: emails left in the
+// outbox, Zoom reminders 24 h and 1 h before; its daily block still runs once, at or after 06:00
+// UTC). Vercel's Hobby plan allowed only once a day. The other two keep Vercel Cron's times.
+exports.cronTick = scheduled("*/15 * * * *", "/api/cron/tick");
+exports.cronRetention = scheduled("30 2 * * *", "/api/cron/retention");
+exports.cronEditorial = scheduled("0 8 * * *", "/api/cron/editorial");

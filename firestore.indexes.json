@@ -1233,6 +1233,12 @@
       "indexes": []
     },
     {
+      "collectionGroup": "stripeKeyLinks",
+      "fieldPath": "expireAt",
+      "ttl": true,
+      "indexes": []
+    },
+    {
       "collectionGroup": "emailOutbox",
       "fieldPath": "expireAt",
       "ttl": true,
